@@ -49,12 +49,16 @@ export function mountScene(canvas: HTMLCanvasElement, tier: Exclude<SceneTier, "
       tesseract.nodeWorldPosition(tesseract.clockwise[i], nodePos);
       const depth = nodePos.z - tesseract.object.position.z;
       const p = toScreen(nodePos);
+      const active = label.hasAttribute("data-active");
       const dx = p.x - c.x;
       const dy = p.y - c.y;
       const len = Math.hypot(dx, dy) || 1;
-      const offset = Math.min(30, box.width * 0.07) + (label.hasAttribute("data-active") ? 16 : 0);
-      label.style.setProperty("--x", `${(p.x + (dx / len) * offset - box.left).toFixed(1)}px`);
-      label.style.setProperty("--y", `${(p.y + (dy / len) * offset - box.top).toFixed(1)}px`);
+      // Outward from the centre; the active number rides just above its node as it moves to the centre.
+      const ux = active ? 0 : dx / len;
+      const uy = active ? -1 : dy / len;
+      const offset = active ? Math.min(46, box.width * 0.1) : Math.min(30, box.width * 0.07);
+      label.style.setProperty("--x", `${(p.x + ux * offset - box.left).toFixed(1)}px`);
+      label.style.setProperty("--y", `${(p.y + uy * offset - box.top).toFixed(1)}px`);
       // Nearer nodes read slightly larger and brighter: the numbers share the scene's depth.
       const near = Math.max(-1, Math.min(1, depth / (f0.scale * 1.2)));
       label.style.setProperty("--depth", (1 + near * 0.12).toFixed(3));

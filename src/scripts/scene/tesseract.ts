@@ -28,6 +28,7 @@ import {
 } from "three";
 import {
   EDGES,
+  INNER,
   INNER_FACES,
   PLANES,
   SILHOUETTE,
@@ -52,6 +53,8 @@ export interface TesseractState {
   activeNode: number;
   /** 0..1 strength of the travelling pulses */
   pulses: number;
+  /** seconds, for the idle float and the orbit while a node is in focus */
+  time: number;
 }
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
@@ -87,6 +90,14 @@ export class Tesseract {
   private readonly accentColor = new Color();
   private readonly mixColor = new Color();
   private readonly nodeGlow = new Float32Array(SILHOUETTE.length);
+  /** 0..1 per node: how far it has travelled into the centre of the cube */
+  private readonly focus = new Float32Array(SILHOUETTE.length);
+  /** the logo's view axis in object space (the long diagonal); orbits turn about it */
+  private readonly axis = new Vector3(1, 1, 1).normalize();
+  private readonly orbit = new Quaternion();
+  /** slow orbit that accumulates only while a node is in focus */
+  private orbitPhase = 0;
+  private readonly tmpV = new Vector3();
   private readonly matrix = new Matrix4();
 
   constructor(lite: boolean) {
@@ -214,6 +225,37 @@ export class Tesseract {
       this.scaleOf[i] = project(this.tmp4, this.projected[i]);
     }
 
+    // 1b. Focus flow: the hovered node travels into the centre of the cube; the other
+    // five orbit about the view axis to close the gap, and the inner cube draws back to
+    // make room. Every edge is drawn from these positions, so the structure flows with them.
+    const kf = 1 - Math.exp(-4.5 * dt);
+    let total = 0;
+    for (let j = 0; j < SILHOUETTE.length; j++) {
+      this.focus[j] += ((state.activeNode === j ? 1 : 0) - this.focus[j]) * kf;
+      total += this.focus[j];
+    }
+    const t = state.time;
+    this.orbitPhase = total > 0.02 ? this.orbitPhase + dt * 0.12 * Math.min(1, total) : 0;
+    for (const vi of INNER) this.projected[vi].multiplyScalar(1 - 0.45 * smooth(Math.min(1, total)));
+    SILHOUETTE.forEach((vi, j) => {
+      const p = this.projected[vi];
+      const others = smooth(Math.min(1, total - this.focus[j]));
+      if (others > 0.001) {
+        // swing round by up to 30°, then keep drifting slowly while the focus lasts
+        this.orbit.setFromAxisAngle(this.axis, others * (Math.PI / 6 + this.orbitPhase));
+        p.applyQuaternion(this.orbit);
+        const along = p.dot(this.axis);
+        this.tmpV.copy(this.axis).multiplyScalar(along);
+        p.sub(this.tmpV).multiplyScalar(1 + 0.12 * others).add(this.tmpV);
+      }
+      // Idle float: each node breathes a little along the view axis and around it.
+      p.addScaledVector(this.axis, Math.sin(t * 0.9 + j * 1.1) * 0.06);
+      p.x += Math.sin(t * 0.7 + j * 2.3) * 0.025;
+      p.y += Math.cos(t * 0.6 + j * 1.7) * 0.025;
+      const f = smooth(this.focus[j]);
+      if (f > 0.001) p.lerp(this.tmpV.copy(this.axis).multiplyScalar(0.35), f);
+    });
+
     // 2. Build-up timings (fractions of state.build).
     const b = state.build;
     const draw = {
@@ -247,7 +289,7 @@ export class Tesseract {
       const target = state.activeNode === i ? 1 : 0;
       this.nodeGlow[i] += (target - this.nodeGlow[i]) * (1 - Math.exp(-8 * dt));
       const g = this.nodeGlow[i];
-      const size = 0.085 * pop * (1 + 0.6 * g) * Math.sqrt(this.scaleOf[vi]);
+      const size = 0.085 * pop * (1 + 1.3 * g) * Math.sqrt(this.scaleOf[vi]);
       this.matrix.makeScale(size, size, size).setPosition(this.projected[vi]);
       this.nodes.setMatrixAt(i, this.matrix);
       this.nodes.setColorAt(i, this.mixColor.copy(this.nodeColor).lerp(this.accentColor, g));

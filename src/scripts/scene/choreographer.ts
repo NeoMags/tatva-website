@@ -68,7 +68,7 @@ export class Choreographer {
   private readonly axisZ = new Vector3(0, 0, 1);
 
   private readonly out: Frame = {
-    tesseract: { xw: 0, yw: 0, zw: 0, build: 0, opacity: 1, activeNode: -1, pulses: 0 },
+    tesseract: { xw: 0, yw: 0, zw: 0, build: 0, opacity: 1, activeNode: -1, pulses: 0, time: 0 },
     position: new Vector3(),
     scale: 1,
     rotation: new Quaternion(),
@@ -113,8 +113,8 @@ export class Choreographer {
       const angle = ((90 - 60 * this.hovered) * Math.PI) / 180;
       // Turn so the hovered node swings toward the viewer.
       // (rotation about Y brings a right-hand node forward when negative; about X, a top node when positive)
-      tx = -Math.cos(angle) * 0.16;
-      ty = Math.sin(angle) * 0.16;
+      tx = -Math.cos(angle) * 0.07;
+      ty = Math.sin(angle) * 0.07;
     }
     const stiffness = 26;
     const damping = 5.5;
@@ -238,6 +238,7 @@ export class Choreographer {
     t.opacity = lerp(1 - 0.9 * smooth(clamp01((this.enter - 0.55) / 0.45)), 1, d);
     t.activeNode = d > 0.5 && this.hovered >= 0 ? this.nodeOrder[this.hovered] : -1;
     t.pulses = 1;
+    t.time = time;
 
     this.out.discBlend = d;
     this.out.travel = e * (1 - d);
