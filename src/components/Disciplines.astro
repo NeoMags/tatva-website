@@ -1,6 +1,6 @@
 ---
 import { useTranslations, type Locale, type UIKey } from "../i18n/ui";
-import { emblemSVG } from "../lib/emblem";
+import { nodeLabelPositions, tesseractSVG } from "../lib/tesseract-svg";
 
 interface Props {
   locale: Locale;
@@ -8,18 +8,19 @@ interface Props {
 const { locale } = Astro.props;
 const t = useTranslations(locale);
 
-/** Six disciplines, one per emblem node, clockwise from the top node. */
-const disciplines = [0, 1, 2, 3, 4, 5].map((i) => ({
+/** Eight disciplines, one per outer corner of the tesseract, clockwise from the top. */
+const labelAt = nodeLabelPositions();
+const disciplines = labelAt.map((pos, i) => ({
   i,
   num: String(i + 1).padStart(2, "0"),
   title: t(`disc.${i}.title` as UIKey),
   body: t(`disc.${i}.body` as UIKey),
   items: t(`disc.${i}.items` as UIKey).split("|"),
-  // Label position around the hexagon, as % of the emblem box.
-  x: 50 + Math.cos(((90 - 60 * i) * Math.PI) / 180) * 47,
-  y: 50 - Math.sin(((90 - 60 * i) * Math.PI) / 180) * 47,
+  // Fallback label position (before the live scene tracks the nodes), % of the box.
+  x: pos.x,
+  y: pos.y,
 }));
-const fallback = emblemSVG({ id: "disc-emblem" });
+const fallback = tesseractSVG({ id: "disc-tesseract" });
 ---
 
 <section class="disciplines" id="disciplines" data-scene-disciplines aria-labelledby="disc-title">

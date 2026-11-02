@@ -26,7 +26,7 @@ export function mountScene(canvas: HTMLCanvasElement, tier: Exclude<SceneTier, "
   };
   applyPalette();
 
-  const choreo = new Choreographer(stage, tesseract.logoPose, tesseract.clockwise, {
+  const choreo = new Choreographer(stage, tesseract.logoPose, tesseract.displayPose, tesseract.clockwise, {
     onBuilt: () => chime("assemble"),
     onDiscipline: (i) => chime("pillar", String(i)),
   });
@@ -73,6 +73,7 @@ export function mountScene(canvas: HTMLCanvasElement, tier: Exclude<SceneTier, "
   stage.start((dt, time) => {
     const f = choreo.frame(dt, time, first);
     tesseract.object.position.copy(f.position);
+    stage.centreOn(f.position.x, f.position.y);
     tesseract.object.scale.setScalar(f.scale);
     tesseract.object.quaternion.copy(f.rotation);
     tesseract.object.updateMatrixWorld();

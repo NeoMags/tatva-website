@@ -92,13 +92,37 @@ export class Stage {
     return this.worldHeight / window.innerHeight;
   }
 
+  /**
+   * Shift the lens so the camera looks straight at a point on the z = 0 plane while the
+   * framing of the page stays the same (an off-axis "shift lens", as in architectural
+   * photography). Without it, a structure placed to one side of the viewport is seen
+   * from an angle: its near corners drift outward and crowd its far ones.
+   */
+  centreOn(x: number, y: number): void {
+    if (Math.abs(x - this.lens.x) < 1e-4 && Math.abs(y - this.lens.y) < 1e-4) return;
+    this.lens.x = x;
+    this.lens.y = y;
+    this.applyLens();
+  }
+
+  private readonly lens = { x: 0, y: 0 };
+
+  private applyLens(): void {
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    const upp = this.unitsPerPixel;
+    this.camera.position.set(this.lens.x, this.lens.y, 12);
+    this.camera.setViewOffset(w, h, -this.lens.x / upp, this.lens.y / upp, w, h);
+    this.camera.updateMatrixWorld();
+  }
+
   resize(): void {
     const w = window.innerWidth;
     const h = window.innerHeight;
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.maxPixelRatio));
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
-    this.camera.updateProjectionMatrix();
+    this.applyLens(); // also updates the projection matrix
   }
 
   start(onFrame: FrameCallback): void {

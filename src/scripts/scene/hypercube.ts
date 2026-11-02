@@ -110,3 +110,38 @@ export function project(v: Vec4, out: { x: number; y: number; z: number }): numb
   out.z = v[2] * k;
   return k;
 }
+
+/**
+ * The 3D display pose (Euler XYZ, radians): a three-quarter view in which all
+ * eight corners of the outer cube are distinct and clear of the inner cube, even
+ * with perspective (chosen by searching pitch/yaw for spacing and clearance).
+ * Shared by the live scene and the build-time SVG drawing so both match.
+ */
+export const DISPLAY_EULER: [number, number, number] = [0.13, -0.43, 0];
+
+/** Rotate a 3D point by DISPLAY_EULER (three.js 'XYZ' order: v' = Rx·Ry·Rz·v). */
+export function displayRotate([x, y, z]: [number, number, number]): [number, number, number] {
+  const [ax, ay, az] = DISPLAY_EULER;
+  // Rz
+  let x1 = x * Math.cos(az) - y * Math.sin(az);
+  let y1 = x * Math.sin(az) + y * Math.cos(az);
+  let z1 = z;
+  // Ry
+  const x2 = x1 * Math.cos(ay) + z1 * Math.sin(ay);
+  const z2 = -x1 * Math.sin(ay) + z1 * Math.cos(ay);
+  x1 = x2;
+  z1 = z2;
+  // Rx
+  const y3 = y1 * Math.cos(ax) - z1 * Math.sin(ax);
+  const z3 = y1 * Math.sin(ax) + z1 * Math.cos(ax);
+  return [x1, y3, z3];
+}
+
+/** Outer-cube corners (indices into VERTICES), clockwise on screen from the top, in the display pose. */
+export const OUTER_CLOCKWISE: number[] = OUTER.map((i) => {
+  const [x, y] = displayRotate([VERTICES[i][0], VERTICES[i][1], VERTICES[i][2]]);
+  const fromTop = (Math.PI / 2 - Math.atan2(y, x) + Math.PI * 4) % (Math.PI * 2);
+  return { i, fromTop };
+})
+  .sort((a, b) => a.fromTop - b.fromTop)
+  .map((n) => n.i);

@@ -9,7 +9,7 @@ const STORAGE_KEY = "tatva-sound";
 type ChimeKind = "assemble" | "pillar" | "tap" | "sent";
 
 /** One note per discipline, a pentatonic run so any two sound good together. */
-const NODE_NOTES = [1046.5, 1174.66, 1318.51, 1567.98, 1760, 2093];
+const NODE_NOTES = [880, 1046.5, 1174.66, 1318.51, 1567.98, 1760, 2093, 2349.32];
 
 // Bell-like partial ratios with their relative loudness and decay (seconds).
 const PARTIALS: ReadonlyArray<[ratio: number, gain: number, decay: number]> = [

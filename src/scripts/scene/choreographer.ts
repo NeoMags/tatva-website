@@ -13,6 +13,16 @@
  */
 import { Quaternion, Vector3 } from "three";
 import type { Stage } from "./stage";
+import { OUTER_CLOCKWISE, VERTICES, displayRotate } from "./hypercube";
+
+/** Screen direction of each node in the display pose, used to tilt toward a hovered node. */
+const NODE_DIRECTIONS = OUTER_CLOCKWISE.map((vi) => {
+  const [x, y] = displayRotate([VERTICES[vi][0], VERTICES[vi][1], VERTICES[vi][2]]);
+  const len = Math.hypot(x, y) || 1;
+  return { x: x / len, y: y / len };
+});
+/** Seconds the turn from the logo pose into the 3D pose takes, after the build-up. */
+const REVEAL_SECONDS = 2.6;
 import type { TesseractState } from "./tesseract";
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
@@ -61,6 +71,7 @@ export class Choreographer {
   private readonly heroCentre = new Vector3();
   private readonly discCentre = new Vector3();
   private readonly qTilt = new Quaternion();
+  private readonly basePose = new Quaternion();
   private readonly qRoll = new Quaternion();
   private readonly qYaw = new Quaternion();
   private readonly axisX = new Vector3(1, 0, 0);
@@ -68,7 +79,7 @@ export class Choreographer {
   private readonly axisZ = new Vector3(0, 0, 1);
 
   private readonly out: Frame = {
-    tesseract: { xw: 0, yw: 0, zw: 0, build: 0, opacity: 1, activeNode: -1, pulses: 0, time: 0 },
+    tesseract: { xw: 0, yw: 0, zw: 0, build: 0, opacity: 1, activeNode: -1, pulses: 0, time: 0, reveal: 0 },
     position: new Vector3(),
     scale: 1,
     rotation: new Quaternion(),
@@ -81,6 +92,7 @@ export class Choreographer {
   constructor(
     private readonly stage: Stage,
     private readonly logoPose: Quaternion,
+    private readonly displayPose: Quaternion,
     /** maps discipline index (clockwise from top) → node index */
     private readonly nodeOrder: number[],
     private readonly events: ChoreographyEvents = {},
@@ -110,11 +122,11 @@ export class Choreographer {
     let tx = 0;
     let ty = 0;
     if (this.hovered >= 0) {
-      const angle = ((90 - 60 * this.hovered) * Math.PI) / 180;
+      const dir = NODE_DIRECTIONS[this.hovered] ?? { x: 0, y: 0 };
       // Turn so the hovered node swings toward the viewer.
       // (rotation about Y brings a right-hand node forward when negative; about X, a top node when positive)
-      tx = -Math.cos(angle) * 0.16;
-      ty = Math.sin(angle) * 0.16;
+      tx = -dir.x * 0.16;
+      ty = dir.y * 0.16;
     }
     // Critically damped-ish: a smooth tilt with only a hint of settle.
     const stiffness = 20;
@@ -228,7 +240,12 @@ export class Choreographer {
     this.qRoll.setFromAxisAngle(this.axisZ, settledRoll + balanceRoll);
     this.qYaw.setFromAxisAngle(this.axisY, yaw);
     this.qTilt.setFromAxisAngle(this.axisX, tilt);
-    this.out.rotation.copy(this.qTilt).multiply(this.qYaw).multiply(this.qRoll).multiply(this.logoPose);
+    // After the build-up, turn from the flat logo pose into the 3D pose so all eight corners show.
+    // The disciplines section always uses the 3D pose.
+    const reveal = Math.max(smooth(clamp01((time - this.startTime - BUILD_SECONDS) / REVEAL_SECONDS)), d);
+    this.basePose.slerpQuaternions(this.logoPose, this.displayPose, reveal);
+    this.out.rotation.copy(this.qTilt).multiply(this.qYaw).multiply(this.qRoll).multiply(this.basePose);
+    this.out.tesseract.reveal = reveal;
 
     // 4D: a slow breath makes the central cube expand and contract; scrolling into the
     // hero turns the tesseract inside out (the inner cube becomes the outer one).

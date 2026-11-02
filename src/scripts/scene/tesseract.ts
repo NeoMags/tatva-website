@@ -1,5 +1,5 @@
 /**
- * The TATVA tesseract as a renderable object: edges, the six logo nodes, the
+ * The TATVA tesseract as a renderable object: edges, the eight corner nodes, the
  * frosted central cube, the dimensional planes and travelling energy pulses.
  *
  * Like the old sculpture, it knows nothing about the page. The choreographer
@@ -11,6 +11,8 @@ import {
   BufferGeometry,
   Color,
   DoubleSide,
+  Euler,
+  FrontSide,
   Group,
   InstancedMesh,
   LineBasicMaterial,
@@ -28,7 +30,9 @@ import {
 } from "three";
 import {
   EDGES,
+  DISPLAY_EULER,
   INNER_FACES,
+  OUTER_CLOCKWISE,
   PLANES,
   SILHOUETTE,
   VERTICES,
@@ -48,8 +52,10 @@ export interface TesseractState {
   build: number;
   /** Overall opacity 0..1 */
   opacity: number;
-  /** Index into SILHOUETTE of the lit node, or -1 */
+  /** Index of the lit node (0–7, clockwise from the top in the display pose), or -1 */
   activeNode: number;
+  /** 0 = logo pose (6 corners visible), 1 = 3D display pose (all 8 corners); reveals the two hidden corners */
+  reveal: number;
   /** 0..1 strength of the travelling pulses */
   pulses: number;
   /** seconds since start (kept for future effects; the structure itself stays rigid) */
@@ -62,11 +68,16 @@ const smooth = (t: number) => t * t * (3 - 2 * t);
 
 const PULSE_COUNT = 5;
 
+/** The eight outer-cube corners, clockwise from the top in the display pose: one per discipline. */
+const NODES = OUTER_CLOCKWISE;
+
 export class Tesseract {
   /** Position, scale and 3D orientation are set on this group by the choreographer. */
   readonly object = new Group();
   /** Rotates the tesseract so its long diagonal faces the viewer: the logo pose. */
   readonly logoPose = new Quaternion();
+  /** Three-quarter view in which all eight outer corners stand apart (see DISPLAY_EULER). */
+  readonly displayPose = new Quaternion().setFromEuler(new Euler(...DISPLAY_EULER, "XYZ"));
 
   private readonly projected = VERTICES.map(() => new Vector3());
   private readonly scaleOf = new Float32Array(16);
@@ -81,6 +92,11 @@ export class Tesseract {
   /** emerald overlay on the edges that meet the highlighted node */
   private readonly highlight: LineSegments<BufferGeometry, LineBasicMaterial>;
   private highlightNode = -1;
+  private readonly centre = new Vector3();
+  private readonly e1 = new Vector3();
+  private readonly e2 = new Vector3();
+  private readonly faceN = new Vector3();
+  private readonly faceC = new Vector3();
   private readonly pulseState = Array.from({ length: PULSE_COUNT }, (_, i) => ({
     edge: (i * 7) % EDGES.length,
     t: i / PULSE_COUNT,
@@ -91,7 +107,7 @@ export class Tesseract {
   private readonly nodeColor = new Color();
   private readonly accentColor = new Color();
   private readonly mixColor = new Color();
-  private readonly nodeGlow = new Float32Array(SILHOUETTE.length);
+  private readonly nodeGlow = new Float32Array(NODES.length);
   private readonly matrix = new Matrix4();
 
   constructor(lite: boolean) {
@@ -118,7 +134,7 @@ export class Tesseract {
     this.nodes = new InstancedMesh(
       sphere,
       new MeshStandardMaterial({ roughness: 0.3, metalness: 0.2, emissiveIntensity: 0.6 }),
-      SILHOUETTE.length,
+      NODES.length,
     );
     this.nodes.frustumCulled = false;
     this.object.add(this.nodes);
@@ -133,7 +149,7 @@ export class Tesseract {
         metalness: 0.05,
         flatShading: true,
         transparent: true,
-        side: DoubleSide,
+        side: FrontSide,
         depthWrite: false,
       }),
     );
@@ -182,20 +198,10 @@ export class Tesseract {
       }
     }
     this.logoPose.premultiply(new Quaternion().setFromAxisAngle(new Vector3(0, 0, 1), roll));
-
-    // Silhouette nodes in clockwise order from the top, so page items can map to them.
-    this.clockwise = SILHOUETTE.map((vi, i) => {
-      const [x, y, z] = VERTICES[vi];
-      const p = new Vector3(x, y, z).applyQuaternion(this.logoPose);
-      const fromTop = (Math.PI / 2 - Math.atan2(p.y, p.x) + Math.PI * 2) % (Math.PI * 2);
-      return { i, fromTop };
-    })
-      .sort((a, b) => a.fromTop - b.fromTop)
-      .map((n) => n.i);
   }
 
-  /** Indices into the node list, clockwise from the top node in the logo pose. */
-  readonly clockwise: number[];
+  /** Node index for each discipline: the nodes are already stored clockwise from the top. */
+  readonly clockwise: number[] = NODES.map((_, i) => i);
 
   setPalette(p: ScenePalette): void {
     this.lines.outer.material.color.copy(p.line);
@@ -217,13 +223,13 @@ export class Tesseract {
         m.needsUpdate = true;
       }
     }
-    for (let i = 0; i < SILHOUETTE.length; i++) this.nodes.setColorAt(i, this.nodeColor);
+    for (let i = 0; i < NODES.length; i++) this.nodes.setColorAt(i, this.nodeColor);
     if (this.nodes.instanceColor) this.nodes.instanceColor.needsUpdate = true;
   }
 
   /** Position of a silhouette node in world space (for linking DOM labels, if needed). */
   nodeWorldPosition(index: number, out = new Vector3()): Vector3 {
-    return out.copy(this.projected[SILHOUETTE[index]]).applyMatrix4(this.object.matrixWorld);
+    return out.copy(this.projected[NODES[index]]).applyMatrix4(this.object.matrixWorld);
   }
 
   update(state: TesseractState, dt: number): void {
@@ -260,9 +266,15 @@ export class Tesseract {
       this.lines[kind].material.opacity = base * o * (f > 0 ? 1 : 0);
     });
 
-    // 4. Nodes: pop in one after another; the active one turns emerald and grows.
-    SILHOUETTE.forEach((vi, i) => {
-      const pop = smooth(clamp01(nodesIn * SILHOUETTE.length - i * 0.6));
+    // 4. Nodes: the six logo corners pop in one after another during the build; the two
+    // corners hidden behind the core in the logo pose appear as the structure turns into 3D.
+    // The active node turns emerald and grows.
+    let order = 0;
+    NODES.forEach((vi, i) => {
+      const hidden = !SILHOUETTE.includes(vi);
+      const pop = hidden
+        ? smooth(clamp01((state.reveal - 0.35) / 0.5))
+        : smooth(clamp01(nodesIn * SILHOUETTE.length - order++ * 0.6));
       const target = state.activeNode === i ? 1 : 0;
       this.nodeGlow[i] += (target - this.nodeGlow[i]) * (1 - Math.exp(-8 * dt));
       const g = this.nodeGlow[i];
@@ -278,7 +290,7 @@ export class Tesseract {
     if (state.activeNode >= 0) this.highlightNode = state.activeNode;
     const glow = this.highlightNode >= 0 ? this.nodeGlow[this.highlightNode] : 0;
     if (glow > 0.01) {
-      const vi = SILHOUETTE[this.highlightNode];
+      const vi = NODES[this.highlightNode];
       const arr = (this.highlight.geometry.attributes.position as BufferAttribute).array as Float32Array;
       EDGES.filter((e) => e.a === vi || e.b === vi).forEach((e, i) => {
         const pa = this.projected[e.a];
@@ -297,9 +309,24 @@ export class Tesseract {
     // 5. Central cube (the w = -1 cube; it swells and shrinks as the 4D rotation moves it).
     const core = this.core.geometry.attributes.position as BufferAttribute;
     const coreArr = core.array as Float32Array;
-    let k = 0;
+    // The 4D rotation reshapes this cube every frame, so face winding is re-checked each time:
+    // every face is wound to point away from the cube's centre. With FrontSide rendering the
+    // glass then shows only its outer faces, never its back faces drawn over the front.
+    this.centre.set(0, 0, 0);
     for (const [q0, q1, q2, q3] of INNER_FACES) {
-      for (const vi of [q0, q1, q2, q0, q2, q3]) {
+      this.centre.add(this.projected[q0]).add(this.projected[q1]).add(this.projected[q2]).add(this.projected[q3]);
+    }
+    this.centre.multiplyScalar(1 / (INNER_FACES.length * 4));
+    let k = 0;
+    for (const quad of INNER_FACES) {
+      const [q0, q1, q2, q3] = quad;
+      const a = this.projected[q0];
+      this.e1.subVectors(this.projected[q1], a);
+      this.e2.subVectors(this.projected[q2], a);
+      this.faceN.crossVectors(this.e1, this.e2);
+      this.faceC.copy(a).add(this.projected[q1]).add(this.projected[q2]).add(this.projected[q3]).multiplyScalar(0.25).sub(this.centre);
+      const order = this.faceN.dot(this.faceC) >= 0 ? [q0, q1, q2, q0, q2, q3] : [q0, q2, q1, q0, q3, q2];
+      for (const vi of order) {
         const p = this.projected[vi];
         coreArr[k++] = p.x * coreIn;
         coreArr[k++] = p.y * coreIn;

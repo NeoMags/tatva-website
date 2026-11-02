@@ -25,7 +25,7 @@ const en = {
   back: "Back to start",
   typePlaceholder: "Type a message…",
   send: "Send",
-  servicesIntro: "TATVA works across six disciplines. Choose one to learn more:",
+  servicesIntro: "TATVA works across eight disciplines. Choose one to learn more:",
   productsText:
     "Three TATVA products are live and in use: Inspecto (inspection software), Poultry Farm Management, and an Inventory app. More are in development.",
   productsLink: "See all work",

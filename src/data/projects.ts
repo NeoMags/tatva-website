@@ -11,8 +11,8 @@
 
 export type Status = "Live" | "Delivered" | "In Development" | "Prototype" | "Concept";
 
-/** Index into the six disciplines (same order as the emblem nodes, clockwise from the top). */
-export type DisciplineIndex = 0 | 1 | 2 | 3 | 4 | 5;
+/** Index into the eight disciplines (same order as the tesseract corners, clockwise from the top). */
+export type DisciplineIndex = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
 export interface Project {
   slug: string;
@@ -42,7 +42,7 @@ export const projects: Project[] = [
     slug: "inspecto",
     title: "Inspecto",
     kind: "Inspection software",
-    disciplines: [0, 2],
+    disciplines: [1, 3],
     status: "Live",
     statusConfirmed: true,
     featured: true,
@@ -53,7 +53,7 @@ export const projects: Project[] = [
     slug: "poultry-farm-management",
     title: "Poultry Farm Management",
     kind: "Farm operations software",
-    disciplines: [2, 0],
+    disciplines: [3, 1],
     status: "Live",
     statusConfirmed: true,
     featured: true,
@@ -74,7 +74,7 @@ export const projects: Project[] = [
     slug: "inventory",
     title: "Inventory App",
     kind: "Inventory management software",
-    disciplines: [2, 0],
+    disciplines: [3, 1],
     status: "Live",
     statusConfirmed: true,
     featured: true,
@@ -85,7 +85,7 @@ export const projects: Project[] = [
     slug: "universal-business-management",
     title: "Universal Business Management",
     kind: "Modular business platform",
-    disciplines: [0, 2, 1],
+    disciplines: [1, 3, 2],
     status: "In Development",
     statusConfirmed: true,
     featured: true,
@@ -105,7 +105,7 @@ export const projects: Project[] = [
     slug: "fleet-management",
     title: "Fleet Management Ecosystem",
     kind: "Fleet and logistics platform",
-    disciplines: [2, 0],
+    disciplines: [3, 1],
     status: "In Development",
     statusConfirmed: false,
     featured: true,
@@ -124,7 +124,7 @@ export const projects: Project[] = [
     slug: "community-connect",
     title: "Community Connect",
     kind: "Citizen services platform",
-    disciplines: [0, 1],
+    disciplines: [1, 2],
     status: "In Development",
     statusConfirmed: false,
     featured: false,
@@ -135,7 +135,7 @@ export const projects: Project[] = [
     slug: "trading-systems",
     title: "Trading Systems & Automation",
     kind: "Trading software",
-    disciplines: [1, 0],
+    disciplines: [2, 1],
     status: "In Development",
     statusConfirmed: false,
     featured: false,
@@ -160,7 +160,7 @@ export const projects: Project[] = [
     slug: "crew-tasks",
     title: "Crew Tasks",
     kind: "Android app",
-    disciplines: [0],
+    disciplines: [1],
     status: "Prototype",
     statusConfirmed: false,
     featured: false,
@@ -172,7 +172,7 @@ export const projects: Project[] = [
     slug: "deals-bot",
     title: "Deals Bot",
     kind: "Telegram automation",
-    disciplines: [1],
+    disciplines: [2],
     status: "Prototype",
     statusConfirmed: false,
     featured: false,
@@ -187,7 +187,7 @@ export const projects: Project[] = [
     slug: "design-visualization",
     title: "Design & Visualization",
     kind: "Architecture and 3D work",
-    disciplines: [3, 4],
+    disciplines: [4, 5],
     status: "Delivered",
     statusConfirmed: false,
     featured: true,
@@ -199,7 +199,7 @@ export const projects: Project[] = [
     slug: "brand-communication",
     title: "Brand & Communication",
     kind: "Identity and marketing work",
-    disciplines: [5],
+    disciplines: [6],
     status: "Delivered",
     statusConfirmed: false,
     featured: false,
