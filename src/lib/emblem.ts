@@ -78,3 +78,38 @@ export function emblemSVG({ id, label }: EmblemOptions): string {
     `<g class="emblem-nodes">${nodes}</g></svg>`
   );
 }
+
+/**
+ * The emblem at one of seven build stages, used as the glyph for each step of the
+ * process: the structure assembles as the process advances.
+ *   1 the idea (a single point) · 2 six nodes · 3 the outer frame · 4 connecting edges
+ *   5 the inner cube outline · 6 the dimensional planes · 7 the complete emblem
+ */
+export function emblemStageSVG(stage: number): string {
+  const outer = hexagon(EMBLEM.R);
+  const inner = hexagon(EMBLEM.r);
+  const c: Pt = [0, 0];
+  const parts: string[] = [];
+  if (stage >= 6) {
+    parts.push(
+      outer
+        .map((p, i) => `<path d="${poly([p, outer[(i + 1) % 6], inner[(i + 1) % 6], inner[i]])}" class="g-plane"/>`)
+        .join(""),
+    );
+  }
+  if (stage >= 7) {
+    parts.push(
+      `<path d="${poly([inner[0], inner[1], c, inner[5]])}" class="g-core g-core-top"/>` +
+        `<path d="${poly([inner[1], inner[2], inner[3], c])}" class="g-core"/>` +
+        `<path d="${poly([inner[5], c, inner[3], inner[4]])}" class="g-core g-core-low"/>`,
+    );
+  }
+  const lines: string[] = [];
+  if (stage >= 3) lines.push(poly(outer));
+  if (stage >= 4) lines.push(...outer.map((p, i) => line(p, inner[i])));
+  if (stage >= 5) lines.push(poly(inner), line(c, inner[1]), line(c, inner[5]), line(c, inner[3]));
+  if (lines.length) parts.push(`<path d="${lines.join("")}" class="g-line"/>`);
+  if (stage >= 2) parts.push(outer.map(([x, y]) => `<circle cx="${x}" cy="${y}" r="9" class="g-node"/>`).join(""));
+  if (stage === 1) parts.push(`<circle cx="0" cy="0" r="12" class="g-node g-seed"/>`);
+  return `<svg viewBox="-115 -115 230 230" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">${parts.join("")}</svg>`;
+}

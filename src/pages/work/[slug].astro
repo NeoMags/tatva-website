@@ -1,0 +1,362 @@
+---
+import Base from "../../layouts/Base.astro";
+import Footer from "../../components/Footer.astro";
+import StatusTag from "../../components/StatusTag.astro";
+import { projects, sortedProjects, type Project } from "../../data/projects";
+import { useTranslations, type UIKey } from "../../i18n/ui";
+
+export function getStaticPaths() {
+  return projects.map((project) => ({ params: { slug: project.slug }, props: { project } }));
+}
+
+interface Props {
+  project: Project;
+}
+const { project: p } = Astro.props;
+const t = useTranslations("en");
+const ordered = sortedProjects();
+const next = ordered[(ordered.findIndex((x) => x.slug === p.slug) + 1) % ordered.length];
+
+// The eight parts of a case study. Anything not yet written is listed as "coming".
+const parts = [
+  { key: "problem", label: "The problem or opportunity", has: Boolean(p.problem) },
+  { key: "requirements", label: "Business requirements", has: Boolean(p.requirements?.length) },
+  { key: "solution", label: "The solution", has: Boolean(p.solution) },
+  { key: "approach", label: "Architecture and design approach", has: Boolean(p.approach) },
+  { key: "features", label: "Key features", has: Boolean(p.features?.length) },
+  { key: "gallery", label: "Screenshots and renders", has: p.images.length > 0 },
+  { key: "tools", label: "Technologies and tools", has: Boolean(p.tools?.length) },
+];
+const missing = parts.filter((x) => !x.has);
+---
+
+<Base
+  locale="en"
+  path={`/work/${p.slug}`}
+  localized={false}
+  title={`${p.title} | TATVA`}
+  description={p.summary}
+>
+  <article class="project">
+    <header class="hero container">
+      <a class="back" href="/work">← All work</a>
+      <div class="hero-grid">
+        <div class="intro">
+          <p class="kind">{p.kind}</p>
+          <h1>{p.title}</h1>
+          <p class="summary">{p.summary}</p>
+        </div>
+        <dl class="facts">
+          <div>
+            <dt>Status</dt>
+            <dd><StatusTag status={p.status} locale="en" /></dd>
+          </div>
+          <div>
+            <dt>Disciplines</dt>
+            <dd>{p.disciplines.map((i) => t(`disc.${i}.title` as UIKey)).join(", ")}</dd>
+          </div>
+          {
+            p.brandExplorations && (
+              <div>
+                <dt>Brand explorations</dt>
+                <dd>{p.brandExplorations.join(", ")}</dd>
+              </div>
+            )
+          }
+        </dl>
+      </div>
+    </header>
+
+    <div class="body container">
+      {
+        p.problem && (
+          <section>
+            <h2>The problem or opportunity</h2>
+            <p>{p.problem}</p>
+          </section>
+        )
+      }
+      {
+        (p.requirements?.length ?? 0) > 0 && p.requirements && (
+          <section>
+            <h2>Business requirements</h2>
+            <ul class="bullets">
+              {p.requirements.map((r) => (
+                <li>{r}</li>
+              ))}
+            </ul>
+          </section>
+        )
+      }
+      {
+        p.solution && (
+          <section>
+            <h2>The solution</h2>
+            <p>{p.solution}</p>
+          </section>
+        )
+      }
+      {
+        p.approach && (
+          <section>
+            <h2>Architecture and design approach</h2>
+            <p>{p.approach}</p>
+          </section>
+        )
+      }
+      {
+        (p.features?.length ?? 0) > 0 && p.features && (
+          <section>
+            <h2>Key features</h2>
+            <ul class="features">
+              {p.features.map((f) => (
+                <li>{f}</li>
+              ))}
+            </ul>
+          </section>
+        )
+      }
+      {
+        p.images.length > 0 && (
+          <section class="wide">
+            <h2>Screenshots and renders</h2>
+            <div class="gallery">
+              {p.images.map((img) => (
+                <img src={img.src} alt={img.alt} loading="lazy" decoding="async" />
+              ))}
+            </div>
+          </section>
+        )
+      }
+      {
+        (p.tools?.length ?? 0) > 0 && p.tools && (
+          <section>
+            <h2>Technologies and tools</h2>
+            <ul class="tools">
+              {p.tools.map((tool) => (
+                <li data-used={String(tool.used)}>
+                  {tool.name}
+                  {!tool.used && <span> · exploring</span>}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )
+      }
+
+      {
+        missing.length > 0 && (
+          <aside class="coming" aria-label="Case study in preparation">
+            <h2>Case study in preparation</h2>
+            <p>These parts are being written with the real project details:</p>
+            <ul>
+              {missing.map((m) => (
+                <li>{m.label}</li>
+              ))}
+            </ul>
+            <a class="btn btn-ghost" href="/#contact">
+              Ask about this project
+            </a>
+          </aside>
+        )
+      }
+    </div>
+
+    <nav class="next container" aria-label="Next project">
+      <a href={`/work/${next.slug}`}>
+        <span class="next-label">Next project</span>
+        <span class="next-title">{next.title} →</span>
+      </a>
+    </nav>
+  </article>
+  <Footer locale="en" />
+</Base>
+
+<style>
+  .project {
+    padding-top: calc(var(--header-h) + var(--s-12));
+  }
+  .back {
+    display: inline-block;
+    margin-bottom: var(--s-8);
+    font-size: var(--step--1);
+    color: var(--text-muted);
+    text-decoration: none;
+  }
+  .back:hover {
+    color: var(--accent);
+  }
+  .hero-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 8fr) minmax(0, 4fr);
+    gap: var(--s-12);
+    padding-bottom: var(--s-12);
+    border-bottom: 1px solid var(--line);
+  }
+  .intro {
+    display: grid;
+    gap: var(--s-4);
+  }
+  .kind {
+    font-size: var(--step--1);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  h1 {
+    font-size: var(--step-4);
+    font-weight: 600;
+    color: var(--text-strong);
+  }
+  .summary {
+    font-size: var(--step-1);
+    line-height: 1.45;
+    color: var(--text);
+    max-width: 44ch;
+  }
+  .facts {
+    display: grid;
+    gap: var(--s-4);
+    align-content: start;
+    margin: 0;
+  }
+  .facts div {
+    display: grid;
+    gap: var(--s-1);
+    padding-bottom: var(--s-4);
+    border-bottom: 1px solid var(--line);
+  }
+  dt {
+    font-size: 0.75rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  dd {
+    margin: 0;
+    color: var(--text);
+  }
+  .body {
+    display: grid;
+    gap: var(--s-12);
+    padding-block: var(--s-12) var(--s-16);
+  }
+  .body > * {
+    max-width: 52rem;
+  }
+  .body section {
+    display: grid;
+    gap: var(--s-4);
+  }
+  h2 {
+    font-size: var(--step-1);
+    font-weight: 600;
+    color: var(--text-strong);
+  }
+  .body p {
+    color: var(--text-muted);
+  }
+  .bullets {
+    margin: 0;
+    padding-left: 1.2em;
+    color: var(--text-muted);
+    display: grid;
+    gap: var(--s-2);
+  }
+  .features {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+    border-top: 1px solid var(--line);
+  }
+  .features li {
+    padding: var(--s-3) 0;
+    border-bottom: 1px solid var(--line);
+    color: var(--text);
+    display: flex;
+    gap: var(--s-3);
+    align-items: baseline;
+  }
+  .features li::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    border: 1px solid var(--accent);
+    flex: none;
+    transform: translateY(-1px);
+  }
+  .gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+    gap: var(--s-4);
+  }
+  .gallery img {
+    width: 100%;
+    border-radius: var(--radius);
+    border: 1px solid var(--line);
+  }
+  .tools {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-2);
+  }
+  .tools li {
+    padding: var(--s-1) var(--s-3);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    font-size: var(--step--1);
+  }
+  .tools li[data-used="false"] {
+    color: var(--text-muted);
+    border-style: dashed;
+  }
+  .coming {
+    display: grid;
+    gap: var(--s-3);
+    padding: var(--s-6);
+    border: 1px dashed var(--line-strong);
+    border-radius: var(--radius);
+    justify-items: start;
+  }
+  .coming ul {
+    margin: 0;
+    padding-left: 1.2em;
+    color: var(--text-muted);
+    font-size: var(--step--1);
+  }
+  .next {
+    border-top: 1px solid var(--line);
+    padding-block: var(--s-12);
+  }
+  .next a {
+    display: grid;
+    gap: var(--s-2);
+    text-decoration: none;
+  }
+  .next-label {
+    font-size: var(--step--1);
+    color: var(--text-muted);
+  }
+  .next-title {
+    font-family: var(--font-display);
+    font-size: var(--step-3);
+    font-weight: 600;
+    color: var(--text-strong);
+    transition: color var(--dur) var(--ease);
+  }
+  .next a:hover .next-title {
+    color: var(--accent);
+  }
+  @media (max-width: 959px) {
+    .hero-grid {
+      grid-template-columns: 1fr;
+      gap: var(--s-8);
+    }
+  }
+</style>

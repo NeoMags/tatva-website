@@ -1,0 +1,189 @@
+---
+import { useTranslations, type Locale, type UIKey } from "../i18n/ui";
+import { emblemStageSVG } from "../lib/emblem";
+
+interface Props {
+  locale: Locale;
+}
+const { locale } = Astro.props;
+const t = useTranslations(locale);
+const steps = [1, 2, 3, 4, 5, 6, 7].map((n) => ({
+  n,
+  title: t(`process.${n}.title` as UIKey),
+  body: t(`process.${n}.body` as UIKey),
+  glyph: emblemStageSVG(n),
+}));
+---
+
+<section class="process" id="process" aria-labelledby="process-title">
+  <div class="container grid">
+    <header class="head">
+      <p class="eyebrow">{t("process.eyebrow")}</p>
+      <h2 id="process-title">{t("process.title")}</h2>
+    </header>
+
+    <ol class="steps" data-steps>
+      {
+        steps.map((s) => (
+          <li class="step" data-step>
+            <span class="glyph" set:html={s.glyph} />
+            <span class="num">{String(s.n).padStart(2, "0")}</span>
+            <div class="text">
+              <h3>{s.title}</h3>
+              <p>{s.body}</p>
+            </div>
+          </li>
+        ))
+      }
+    </ol>
+  </div>
+</section>
+
+<script>
+  // Each step lights up as it reaches the middle of the screen. Steps are fully
+  // visible without this; it only adds emphasis.
+  const steps = document.querySelectorAll<HTMLElement>("[data-step]");
+  if ("IntersectionObserver" in window && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    const io = new IntersectionObserver(
+      (entries) => entries.forEach((e) => e.target.toggleAttribute("data-current", e.isIntersecting)),
+      { rootMargin: "-45% 0px -45% 0px" },
+    );
+    steps.forEach((s) => io.observe(s));
+  }
+</script>
+
+<style>
+  .process {
+    padding-block: var(--s-24);
+    border-top: 1px solid var(--line);
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    gap: var(--s-16);
+    align-items: start;
+  }
+  .head {
+    position: sticky;
+    top: calc(var(--header-h) + var(--s-8));
+    display: grid;
+    gap: var(--s-4);
+  }
+  h2 {
+    font-size: var(--step-3);
+    font-weight: 600;
+    color: var(--text-strong);
+    max-width: 14ch;
+  }
+  .steps {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    position: relative;
+  }
+  .steps::before {
+    /* the line that connects the glyphs */
+    content: "";
+    position: absolute;
+    left: 32px;
+    top: 32px;
+    bottom: 32px;
+    width: 1px;
+    background: var(--line-strong);
+  }
+  .step {
+    display: grid;
+    grid-template-columns: 64px 2.5rem minmax(0, 1fr);
+    gap: var(--s-4);
+    align-items: start;
+    padding-block: var(--s-6);
+  }
+  .glyph {
+    position: relative;
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: var(--bg);
+    display: grid;
+    place-items: center;
+  }
+  .glyph :global(svg) {
+    width: 52px;
+    height: 52px;
+  }
+  .glyph :global(.g-line) {
+    fill: none;
+    stroke: var(--text-muted);
+    stroke-width: 6;
+    stroke-linejoin: round;
+  }
+  .glyph :global(.g-node) {
+    fill: var(--text);
+  }
+  .glyph :global(.g-seed) {
+    fill: var(--accent);
+  }
+  .glyph :global(.g-plane) {
+    fill: var(--text);
+    opacity: 0.08;
+  }
+  .glyph :global(.g-core) {
+    fill: var(--text);
+    opacity: 0.45;
+  }
+  .glyph :global(.g-core-top) {
+    opacity: 0.8;
+  }
+  .glyph :global(.g-core-low) {
+    opacity: 0.3;
+  }
+  .step:last-child .glyph :global(.g-node) {
+    fill: var(--accent);
+  }
+  .num {
+    font-family: var(--font-display);
+    font-size: var(--step--1);
+    font-weight: 600;
+    color: var(--text-muted);
+    padding-top: 0.35em;
+    font-variant-numeric: tabular-nums;
+  }
+  .text {
+    display: grid;
+    gap: var(--s-1);
+  }
+  h3 {
+    font-size: var(--step-1);
+    font-weight: 600;
+    color: var(--text-strong);
+  }
+  .text p {
+    color: var(--text-muted);
+  }
+  .step .glyph,
+  .step h3 {
+    transition: transform var(--dur-slow) var(--ease), color var(--dur) var(--ease);
+  }
+  .step[data-current] .glyph {
+    transform: scale(1.12);
+  }
+  .step[data-current] .num {
+    color: var(--accent);
+  }
+
+  @media (max-width: 959px) {
+    .grid {
+      grid-template-columns: 1fr;
+      gap: var(--s-8);
+    }
+    .head {
+      position: static;
+    }
+    .step {
+      grid-template-columns: 64px minmax(0, 1fr);
+    }
+    .num {
+      display: none;
+    }
+  }
+</style>

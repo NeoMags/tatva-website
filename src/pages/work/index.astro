@@ -1,0 +1,49 @@
+---
+import Base from "../../layouts/Base.astro";
+import WorkList from "../../components/WorkList.astro";
+import Footer from "../../components/Footer.astro";
+import { sortedProjects } from "../../data/projects";
+import { useTranslations } from "../../i18n/ui";
+
+const t = useTranslations("en");
+const all = sortedProjects();
+---
+
+<Base
+  locale="en"
+  path="/work"
+  localized={false}
+  title="Work | TATVA"
+  description="Software products, business systems, automation, architecture and 3D work by TATVA, each with its real status."
+>
+  <section class="page container">
+    <header class="head">
+      <p class="eyebrow">{t("work.eyebrow")}</p>
+      <h1>{t("work.title")}</h1>
+      <p class="intro">{t("work.intro")}</p>
+    </header>
+    <WorkList projects={all} locale="en" filterable />
+  </section>
+  <Footer locale="en" />
+</Base>
+
+<style>
+  .page {
+    padding-top: calc(var(--header-h) + var(--s-16));
+    padding-bottom: var(--s-24);
+  }
+  .head {
+    display: grid;
+    gap: var(--s-4);
+    margin-bottom: var(--s-12);
+  }
+  h1 {
+    font-size: var(--step-4);
+    font-weight: 600;
+    color: var(--text-strong);
+    max-width: 16ch;
+  }
+  .intro {
+    color: var(--text-muted);
+  }
+</style>

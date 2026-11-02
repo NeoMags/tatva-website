@@ -1,0 +1,209 @@
+---
+/**
+ * Editorial list of projects: one row per project, linking to its page.
+ * Used on the home page (featured only) and on /work (all, filterable).
+ */
+import StatusTag from "./StatusTag.astro";
+import type { Project } from "../data/projects";
+import { useTranslations, type Locale, type UIKey } from "../i18n/ui";
+
+interface Props {
+  projects: Project[];
+  locale: Locale;
+  /** Show the discipline filter above the list */
+  filterable?: boolean;
+}
+const { projects, locale, filterable = false } = Astro.props;
+const t = useTranslations(locale);
+const disciplineName = (i: number) => t(`disc.${i}.title` as UIKey);
+const used = [...new Set(projects.flatMap((p) => p.disciplines))].sort();
+---
+
+{
+  filterable && (
+    <div class="filters" role="group" aria-label="Filter by discipline" data-filters>
+      <button type="button" aria-pressed="true" data-filter="all">
+        {t("work.filter.all")}
+      </button>
+      {used.map((i) => (
+        <button type="button" aria-pressed="false" data-filter={String(i)}>
+          {disciplineName(i)}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+<ol class="work-list" data-work-list>
+  {
+    projects.map((p, n) => (
+      <li data-disciplines={p.disciplines.join(" ")}>
+        <a class="row" href={`/work/${p.slug}`}>
+          <span class="num">{String(n + 1).padStart(2, "0")}</span>
+          <span class="name">
+            <span class="title">{p.title}</span>
+            <span class="kind">{p.kind}</span>
+          </span>
+          <span class="summary">{p.summary}</span>
+          <span class="meta">
+            <StatusTag status={p.status} locale={locale} />
+            <span class="arrow" aria-hidden="true">
+              →
+            </span>
+          </span>
+        </a>
+      </li>
+    ))
+  }
+</ol>
+
+{
+  filterable && (
+    <script>
+      const group = document.querySelector<HTMLElement>("[data-filters]");
+      const items = document.querySelectorAll<HTMLElement>("[data-work-list] > li");
+      group?.addEventListener("click", (e) => {
+        const button = (e.target as HTMLElement).closest<HTMLButtonElement>("button[data-filter]");
+        if (!button) return;
+        const value = button.dataset.filter;
+        group.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b === button)));
+        items.forEach((item) => {
+          const match = value === "all" || (item.dataset.disciplines ?? "").split(" ").includes(value ?? "");
+          item.hidden = !match;
+        });
+      });
+    </script>
+  )
+}
+
+<style>
+  .filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-2);
+    margin-bottom: var(--s-8);
+  }
+  .filters button {
+    padding: var(--s-2) var(--s-4);
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    background: transparent;
+    font-size: var(--step--1);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease),
+      background-color var(--dur-fast) var(--ease);
+  }
+  .filters button:hover {
+    color: var(--text);
+    border-color: var(--text-muted);
+  }
+  .filters button[aria-pressed="true"] {
+    background: var(--text-strong);
+    border-color: var(--text-strong);
+    color: var(--bg);
+  }
+  .work-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid var(--line);
+  }
+  .work-list li[hidden] {
+    display: none;
+  }
+  .row {
+    display: grid;
+    grid-template-columns: 3rem minmax(0, 4fr) minmax(0, 6fr) 10.5rem;
+    gap: var(--s-6);
+    align-items: baseline;
+    padding: var(--s-6) var(--s-2);
+    border-bottom: 1px solid var(--line);
+    text-decoration: none;
+    color: inherit;
+    position: relative;
+    transition: background-color var(--dur) var(--ease);
+  }
+  .row::before {
+    /* a thin emerald line that draws across on hover */
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: -1px;
+    height: 1px;
+    width: 100%;
+    background: var(--accent);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform var(--dur-slow) var(--ease);
+  }
+  .row:hover::before,
+  .row:focus-visible::before {
+    transform: scaleX(1);
+  }
+  .row:hover,
+  .row:focus-visible {
+    background: color-mix(in srgb, var(--surface) 60%, transparent);
+  }
+  .num {
+    font-family: var(--font-display);
+    font-size: var(--step--1);
+    font-weight: 600;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .name {
+    display: grid;
+    gap: var(--s-1);
+  }
+  .title {
+    font-family: var(--font-display);
+    font-size: var(--step-1);
+    font-weight: 600;
+    color: var(--text-strong);
+    line-height: 1.2;
+  }
+  .kind {
+    font-size: var(--step--1);
+    color: var(--text-muted);
+  }
+  .summary {
+    color: var(--text-muted);
+    font-size: var(--step-0);
+  }
+  .meta {
+    display: flex;
+    align-items: center;
+    gap: var(--s-4);
+    justify-self: end;
+  }
+  .arrow {
+    font-size: var(--step-1);
+    color: var(--text-muted);
+    transition: transform var(--dur) var(--ease), color var(--dur) var(--ease);
+  }
+  .row:hover .arrow,
+  .row:focus-visible .arrow {
+    transform: translateX(4px);
+    color: var(--accent);
+  }
+
+  @media (max-width: 959px) {
+    .row {
+      grid-template-columns: 2.5rem minmax(0, 1fr) auto;
+      row-gap: var(--s-2);
+    }
+    .summary {
+      grid-column: 2 / -1;
+      grid-row: 2;
+      font-size: var(--step--1);
+    }
+    .meta {
+      grid-column: 3;
+      grid-row: 1;
+    }
+    .arrow {
+      display: none;
+    }
+  }
+</style>

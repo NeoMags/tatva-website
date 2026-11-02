@@ -1,0 +1,46 @@
+---
+import type { Status } from "../data/projects";
+import { useTranslations, type Locale, type UIKey } from "../i18n/ui";
+
+interface Props {
+  status: Status;
+  locale: Locale;
+}
+const { status, locale } = Astro.props;
+const t = useTranslations(locale);
+---
+
+<span class="status" data-status={status}><span class="dot" aria-hidden="true"></span>{t(`status.${status}` as UIKey)}</span>
+
+<style>
+  .status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45em;
+    padding: 0.2em 0.65em;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+  .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    border: 1px solid currentColor;
+  }
+  [data-status="Live"] {
+    color: var(--accent);
+    border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  }
+  [data-status="Live"] .dot {
+    background: currentColor;
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+  [data-status="Delivered"] .dot {
+    background: currentColor;
+  }
+</style>

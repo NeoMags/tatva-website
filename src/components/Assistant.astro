@@ -1,0 +1,570 @@
+---
+/**
+ * Floating assistant: an animated emblem button that opens a guided chat.
+ * Paths: services, live products, pricing, start a project, WhatsApp, and
+ * TATVA Care (senior-citizen help with consent, voice or typed request).
+ * Emergency numbers are always visible at the top of the panel.
+ */
+import { assistantStrings } from "../i18n/assistant";
+import { useTranslations, type Locale, type UIKey } from "../i18n/ui";
+import { emblemSVG } from "../lib/emblem";
+import { site } from "../data/site";
+
+interface Props {
+  locale: Locale;
+}
+const { locale } = Astro.props;
+const s = assistantStrings(locale);
+const t = useTranslations(locale);
+const data = {
+  s,
+  phone: site.phone,
+  whatsapp: `https://wa.me/${site.phone.e164.replace("+", "")}`,
+  disciplines: [0, 1, 2, 3, 4, 5].map((i) => ({
+    title: t(`disc.${i}.title` as UIKey),
+    body: t(`disc.${i}.body` as UIKey),
+  })),
+};
+const emblem = emblemSVG({ id: "assist-emblem" });
+const emblemSmall = emblemSVG({ id: "assist-emblem-sm" });
+---
+
+<div class="assistant" data-assistant>
+  <button class="launcher" type="button" aria-label={s.open} aria-expanded="false" aria-controls="assistant-panel" data-assist-open>
+    <span class="launcher-emblem" set:html={emblem} />
+    <span class="ring" aria-hidden="true"></span>
+    <span class="bubble" aria-hidden="true">{s.bubble}</span>
+  </button>
+
+  <section class="panel" id="assistant-panel" role="dialog" aria-labelledby="assistant-title" aria-modal="false" hidden data-assist-panel>
+    <header class="panel-head">
+      <span class="head-emblem" set:html={emblemSmall} />
+      <div class="head-text">
+        <h2 id="assistant-title">{s.title}</h2>
+        <p>{s.subtitle}</p>
+      </div>
+      <button class="icon" type="button" aria-label={s.close} data-assist-close>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+      </button>
+    </header>
+
+    <div class="emergency" role="note">
+      <p><strong>{s.emergencyTitle}</strong> {s.emergencyText}</p>
+      <div class="emergency-actions">
+        <a class="sos" href="tel:112">{s.call112}</a>
+        <a class="sos" href="tel:108">{s.call108}</a>
+      </div>
+    </div>
+
+    <ol class="log" aria-live="polite" data-assist-log></ol>
+    <div class="actions" data-assist-actions></div>
+
+    <form class="composer" data-assist-composer>
+      <label class="visually-hidden" for="assist-input">{s.typePlaceholder}</label>
+      <input id="assist-input" type="text" autocomplete="off" maxlength="500" placeholder={s.typePlaceholder} />
+      <button type="submit" aria-label={s.send}>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h14M13 6l6 6-6 6"></path></svg>
+      </button>
+    </form>
+  </section>
+</div>
+
+<script type="application/json" id="assistant-data" set:html={JSON.stringify(data)} />
+
+<script>
+  import { initAssistant } from "../scripts/ui/assistant";
+  initAssistant();
+</script>
+
+<style>
+  .assistant {
+    position: fixed;
+    right: max(16px, env(safe-area-inset-right, 0px));
+    bottom: max(16px, env(safe-area-inset-bottom, 0px));
+    z-index: 60;
+  }
+
+  /* Launcher: the emblem, slowly turning, with an emerald pulse behind it. */
+  .launcher {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 64px;
+    height: 64px;
+    padding: 0;
+    border-radius: 50%;
+    border: 1px solid var(--line-strong);
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+    box-shadow: 0 10px 30px rgb(0 0 0 / 0.35);
+    transition: transform var(--dur) var(--ease), border-color var(--dur) var(--ease);
+  }
+  .launcher:hover {
+    transform: translateY(-2px);
+    border-color: var(--accent);
+  }
+  .launcher-emblem {
+    width: 40px;
+    height: 40px;
+    animation: spin 24s linear infinite;
+  }
+  .launcher-emblem :global(svg) {
+    width: 100%;
+    height: 100%;
+  }
+  .launcher-emblem :global(.emblem-nodes circle) {
+    animation: node 3.2s ease-in-out infinite;
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+  .launcher-emblem :global(.emblem-nodes circle:nth-child(2)) { animation-delay: 0.53s; }
+  .launcher-emblem :global(.emblem-nodes circle:nth-child(3)) { animation-delay: 1.07s; }
+  .launcher-emblem :global(.emblem-nodes circle:nth-child(4)) { animation-delay: 1.6s; }
+  .launcher-emblem :global(.emblem-nodes circle:nth-child(5)) { animation-delay: 2.13s; }
+  .launcher-emblem :global(.emblem-nodes circle:nth-child(6)) { animation-delay: 2.67s; }
+  .ring {
+    position: absolute;
+    inset: -1px;
+    border-radius: 50%;
+    border: 1px solid var(--accent);
+    opacity: 0;
+    animation: pulse 3.2s var(--ease) infinite;
+    pointer-events: none;
+  }
+  .bubble {
+    position: absolute;
+    right: calc(100% + 12px);
+    top: 50%;
+    transform: translateY(-50%);
+    white-space: nowrap;
+    padding: var(--s-2) var(--s-3);
+    border-radius: var(--radius);
+    background: var(--text-strong);
+    color: var(--bg);
+    font-size: var(--step--1);
+    font-weight: 500;
+    opacity: 0;
+    animation: bubble 6s var(--ease) 4s 1 both;
+    pointer-events: none;
+  }
+  .assistant[data-open] .launcher {
+    display: none;
+  }
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  @keyframes node {
+    0%, 100% { fill: var(--emblem-node); transform: scale(1); }
+    50% { fill: var(--emerald); transform: scale(1.35); }
+  }
+  @keyframes pulse {
+    0% { opacity: 0.7; transform: scale(1); }
+    100% { opacity: 0; transform: scale(1.5); }
+  }
+  @keyframes bubble {
+    0% { opacity: 0; transform: translate(6px, -50%); }
+    10%, 85% { opacity: 1; transform: translate(0, -50%); }
+    100% { opacity: 0; transform: translate(0, -50%); }
+  }
+
+  /* Panel */
+  .panel {
+    position: fixed;
+    right: max(16px, env(safe-area-inset-right, 0px));
+    bottom: max(16px, env(safe-area-inset-bottom, 0px));
+    width: min(400px, calc(100vw - 32px));
+    height: min(680px, calc(100vh - 32px));
+    display: flex;
+    flex-direction: column;
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    border-radius: 10px;
+    box-shadow: 0 24px 60px rgb(0 0 0 / 0.45);
+    overflow: hidden;
+    animation: open 360ms var(--ease);
+  }
+  .panel[hidden] {
+    display: none;
+  }
+  @keyframes open {
+    from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  }
+  .panel-head {
+    display: flex;
+    align-items: center;
+    gap: var(--s-3);
+    padding: var(--s-3) var(--s-4);
+    border-bottom: 1px solid var(--line);
+  }
+  .head-emblem {
+    width: 32px;
+    height: 32px;
+    flex: none;
+  }
+  .head-emblem :global(svg) {
+    width: 100%;
+    height: 100%;
+  }
+  .head-text {
+    flex: 1;
+    min-width: 0;
+  }
+  .head-text h2 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-strong);
+    letter-spacing: 0;
+  }
+  .head-text p {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+  .icon {
+    width: 40px;
+    height: 40px;
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: var(--radius);
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+  .icon:hover {
+    color: var(--text);
+    background: var(--surface-2);
+  }
+  .icon svg,
+  .composer svg {
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  /* Emergency strip: always visible, its own semantic colour. */
+  .emergency {
+    --sos: #ff5a5f;
+    display: grid;
+    gap: var(--s-2);
+    padding: var(--s-3) var(--s-4);
+    background: color-mix(in srgb, var(--sos) 10%, var(--surface));
+    border-bottom: 1px solid color-mix(in srgb, var(--sos) 35%, transparent);
+    font-size: 0.9rem;
+    color: var(--text);
+  }
+  :global(:root[data-theme="light"]) .emergency {
+    --sos: #c62828;
+  }
+  .emergency strong {
+    color: var(--sos);
+  }
+  .emergency-actions {
+    display: flex;
+    gap: var(--s-2);
+  }
+  .sos {
+    flex: 1;
+    display: grid;
+    place-items: center;
+    min-height: 44px;
+    border-radius: var(--radius);
+    border: 1px solid var(--sos);
+    color: var(--sos);
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .sos:hover {
+    background: var(--sos);
+    color: #fff;
+  }
+
+  .log {
+    flex: 1;
+    list-style: none;
+    margin: 0;
+    padding: var(--s-4);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-3);
+    overscroll-behavior: contain;
+  }
+  .log :global(.msg) {
+    max-width: 88%;
+    padding: var(--s-3) var(--s-4);
+    border-radius: 12px;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    animation: msg 300ms var(--ease);
+  }
+  .log :global(.msg.bot) {
+    align-self: flex-start;
+    background: var(--surface-2);
+    color: var(--text);
+    border-bottom-left-radius: 4px;
+  }
+  .log :global(.msg.user) {
+    align-self: flex-end;
+    background: var(--accent);
+    color: var(--on-accent);
+    border-bottom-right-radius: 4px;
+  }
+  .log :global(.msg.note) {
+    align-self: stretch;
+    max-width: none;
+    background: transparent;
+    border: 1px dashed var(--line-strong);
+    color: var(--text-muted);
+    font-size: 0.85rem;
+  }
+  .log :global(.msg a) {
+    color: inherit;
+  }
+  @keyframes msg {
+    from { opacity: 0; transform: translateY(6px); }
+  }
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-2);
+    padding: 0 var(--s-4) var(--s-3);
+    max-height: 55%;
+    overflow-y: auto;
+  }
+  .actions:empty {
+    display: none;
+  }
+  .actions:has(.card) {
+    max-height: 78%;
+  }
+  .composer[hidden] {
+    display: none;
+  }
+  .actions :global(.chip) {
+    min-height: 40px;
+    padding: var(--s-2) var(--s-3);
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 0.9rem;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    transition: border-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+  }
+  .actions :global(.chip:hover) {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .actions :global(.chip.primary) {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--on-accent);
+  }
+  .actions :global(.chip.care) {
+    border-color: var(--accent);
+  }
+
+  /* Care flow: large text and big targets for older users. */
+  .actions :global(.card) {
+    width: 100%;
+    display: grid;
+    gap: var(--s-3);
+    padding: var(--s-4);
+    border: 1px solid var(--line-strong);
+    border-radius: 10px;
+    background: var(--bg);
+    font-size: 1.05rem;
+  }
+  .actions :global(.card h3) {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-strong);
+    letter-spacing: 0;
+  }
+  .actions :global(.card label) {
+    display: grid;
+    gap: var(--s-1);
+    font-size: 0.95rem;
+    color: var(--text-muted);
+  }
+  .actions :global(.card input[type="text"]),
+  .actions :global(.card input[type="tel"]),
+  .actions :global(.card textarea) {
+    width: 100%;
+    min-height: 50px;
+    padding: var(--s-3);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 1.1rem;
+  }
+  .actions :global(.card textarea) {
+    min-height: 110px;
+    resize: vertical;
+  }
+  .actions :global(.card .tick) {
+    display: flex;
+    gap: var(--s-3);
+    align-items: flex-start;
+    color: var(--text);
+    font-size: 1rem;
+  }
+  .actions :global(.card .tick input) {
+    width: 22px;
+    height: 22px;
+    margin-top: 2px;
+    accent-color: var(--accent);
+    flex: none;
+  }
+  .actions :global(.big) {
+    min-height: 54px;
+    border-radius: var(--radius);
+    border: 1px solid var(--line-strong);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 1.05rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    text-decoration: none;
+  }
+  .actions :global(.big.primary) {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--on-accent);
+  }
+  .actions :global(.big:disabled) {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+  .actions :global(.row2) {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--s-2);
+  }
+  .actions :global(.row2 .big[aria-pressed="true"]) {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .actions :global(.err) {
+    color: #ff6b6b;
+    font-size: 0.9rem;
+    min-height: 0;
+  }
+  .actions :global(.mic) {
+    width: 100%;
+    min-height: 96px;
+    border-radius: 12px;
+    border: 2px solid var(--accent);
+    background: var(--accent-soft);
+    color: var(--text-strong);
+    font-size: 1.15rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    gap: var(--s-1);
+  }
+  .actions :global(.mic[data-recording]) {
+    background: var(--accent);
+    color: var(--on-accent);
+    animation: rec 1.4s ease-in-out infinite;
+  }
+  .actions :global(.mic .time) {
+    font-variant-numeric: tabular-nums;
+    font-size: 0.95rem;
+    font-weight: 500;
+  }
+  .actions :global(audio) {
+    width: 100%;
+  }
+  .actions :global(.small) {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+  .actions :global(.linkbtn) {
+    background: none;
+    border: 0;
+    padding: var(--s-1) 0;
+    color: var(--accent);
+    font-size: 0.95rem;
+    text-decoration: underline;
+    cursor: pointer;
+    justify-self: start;
+  }
+  @keyframes rec {
+    50% { box-shadow: 0 0 0 8px var(--accent-soft); }
+  }
+
+  .composer {
+    display: flex;
+    gap: var(--s-2);
+    padding: var(--s-3) var(--s-4);
+    border-top: 1px solid var(--line);
+  }
+  .composer input {
+    flex: 1;
+    min-width: 0;
+    min-height: 44px;
+    padding: 0 var(--s-3);
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    background: var(--bg);
+    color: var(--text);
+  }
+  .composer input:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  .composer button {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 0;
+    background: var(--accent);
+    color: var(--on-accent);
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+  }
+
+  @media (max-width: 560px) {
+    /* Phones: a full-screen sheet, easier to read and tap. */
+    .panel {
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      border-radius: 0;
+      border: 0;
+      padding-top: env(safe-area-inset-top, 0px);
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    .launcher {
+      width: 58px;
+      height: 58px;
+    }
+    .bubble {
+      display: none;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .launcher-emblem,
+    .launcher-emblem :global(.emblem-nodes circle),
+    .ring {
+      animation: none;
+    }
+  }
+</style>

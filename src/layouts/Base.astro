@@ -7,6 +7,7 @@ import "@fontsource/noto-sans-devanagari/400.css";
 import "@fontsource/noto-sans-devanagari/700.css";
 import "../styles/global.css";
 import Header from "../components/Header.astro";
+import Assistant from "../components/Assistant.astro";
 import { locales, localeMeta, localizePath, useTranslations, type Locale } from "../i18n/ui";
 
 interface Props {
@@ -15,8 +16,10 @@ interface Props {
   path: string;
   title?: string;
   description?: string;
+  /** false for pages that exist in English only; language links then go to that language's home */
+  localized?: boolean;
 }
-const { locale, path } = Astro.props;
+const { locale, path, localized = true } = Astro.props;
 const t = useTranslations(locale);
 const title = Astro.props.title ?? t("meta.title");
 const description = Astro.props.description ?? t("meta.description");
@@ -32,8 +35,8 @@ const canonical = new URL(localizePath(path, locale), site).href;
     <title>{title}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
-    {locales.map((l) => <link rel="alternate" hreflang={localeMeta[l].htmlLang} href={new URL(localizePath(path, l), site).href} />)}
-    <link rel="alternate" hreflang="x-default" href={new URL(localizePath(path, "en"), site).href} />
+    {localized && locales.map((l) => <link rel="alternate" hreflang={localeMeta[l].htmlLang} href={new URL(localizePath(path, l), site).href} />)}
+    {localized && <link rel="alternate" hreflang="x-default" href={new URL(localizePath(path, "en"), site).href} />}
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <meta name="theme-color" content="#050505" />
     <meta property="og:type" content="website" />
@@ -55,10 +58,11 @@ const canonical = new URL(localizePath(path, locale), site).href;
   <body>
     <a class="skip-link" href="#main">{t("nav.skip")}</a>
     <div class="scene-layer" aria-hidden="true"><canvas id="scene"></canvas></div>
-    <Header locale={locale} path={path} />
+    <Header locale={locale} path={localized ? path : "/"} />
     <main id="main">
       <slot />
     </main>
+    <Assistant locale={locale} />
 
     <script>
       import { detectTier } from "../scripts/scene/capability";
