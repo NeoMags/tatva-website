@@ -1,0 +1,116 @@
+/*
+ * TATVA design tokens — the single source of truth for colour, type, space and motion.
+ * Dark is the default; light is applied by [data-theme="light"] or by the system
+ * preference when the visitor chose "system".
+ * Contrast ratios (WCAG 2.x) were measured for every text/background pair; see
+ * the Build Specification. Never use --lime as text on a light background (1.7:1).
+ */
+
+:root {
+  /* Brand palette (raw) */
+  --emerald: #063d32;
+  --forest: #0b5745;
+  --night: #061c18;
+  --warm-white: #f5f5ef;
+  --lime: #9bcb72;
+  --champagne: #c8b78b;
+  --sage: #a7b4ac;
+
+  /* Semantic colours — dark theme (default) */
+  --bg: var(--night);
+  --surface: var(--emerald);
+  --surface-2: #0a2b25;
+  --text: var(--warm-white);
+  --text-muted: var(--sage);
+  --accent: var(--lime);
+  --accent-2: var(--champagne);
+  --on-accent: var(--night);
+  --line: rgb(245 245 239 / 0.14);
+  --line-strong: rgb(245 245 239 / 0.28);
+  --focus: var(--lime);
+
+  /* 3D scene colours, read by the WebGL scene on theme change */
+  --scene-solid: #0b5745;
+  --scene-edge: #9bcb72;
+  --scene-node: #c8b78b;
+  --scene-ambient: #0e3a30;
+
+  color-scheme: dark;
+
+  /* Type */
+  --font-display: "Montserrat Variable", "Noto Sans Kannada", "Noto Sans Devanagari", system-ui, sans-serif;
+  --font-body: "Inter Variable", "Noto Sans Kannada", "Noto Sans Devanagari", system-ui, sans-serif;
+  --step--1: clamp(0.8125rem, 0.79rem + 0.1vw, 0.875rem);
+  --step-0: clamp(1rem, 0.96rem + 0.2vw, 1.125rem);
+  --step-1: clamp(1.25rem, 1.15rem + 0.5vw, 1.5rem);
+  --step-2: clamp(1.625rem, 1.4rem + 1.1vw, 2.25rem);
+  --step-3: clamp(2.125rem, 1.6rem + 2.6vw, 3.75rem);
+  --step-4: clamp(2.25rem, 1.2rem + 3.4vw, 4.25rem);
+  --measure: 68ch;
+
+  /* Space (4px base) */
+  --s-1: 0.25rem;
+  --s-2: 0.5rem;
+  --s-3: 0.75rem;
+  --s-4: 1rem;
+  --s-6: 1.5rem;
+  --s-8: 2rem;
+  --s-12: 3rem;
+  --s-16: 4rem;
+  --s-24: 6rem;
+  --s-32: 8rem;
+
+  /* Layout */
+  --max-w: 80rem;
+  --gutter: clamp(1rem, 0.5rem + 2.5vw, 2.5rem);
+  --radius: 6px;
+  --header-h: 4.25rem;
+
+  /* Motion */
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-fast: 200ms;
+  --dur: 400ms;
+  --dur-slow: 600ms;
+}
+
+/* Light theme — explicit choice */
+:root[data-theme="light"] {
+  --bg: var(--warm-white);
+  --surface: #ecece3;
+  --surface-2: #e3e5da;
+  --text: var(--night);
+  --text-muted: #4a5a52;
+  --accent: var(--forest);
+  --accent-2: #6e5c33;
+  --on-accent: var(--warm-white);
+  --line: rgb(6 28 24 / 0.12);
+  --line-strong: rgb(6 28 24 / 0.26);
+  --focus: var(--forest);
+  --scene-solid: #d9e4d2;
+  --scene-edge: #0b5745;
+  --scene-node: #8a7448;
+  --scene-ambient: #f5f5ef;
+  color-scheme: light;
+}
+
+/* Light theme — following the device */
+@media (prefers-color-scheme: light) {
+  :root[data-theme="system"] {
+    --bg: var(--warm-white);
+    --surface: #ecece3;
+    --surface-2: #e3e5da;
+    --text: var(--night);
+    --text-muted: #4a5a52;
+    --accent: var(--forest);
+    --accent-2: #6e5c33;
+    --on-accent: var(--warm-white);
+    --line: rgb(6 28 24 / 0.12);
+    --line-strong: rgb(6 28 24 / 0.26);
+    --focus: var(--forest);
+    --scene-solid: #d9e4d2;
+    --scene-edge: #0b5745;
+    --scene-node: #8a7448;
+    --scene-ambient: #f5f5ef;
+    color-scheme: light;
+  }
+}

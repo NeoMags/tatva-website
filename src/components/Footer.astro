@@ -1,0 +1,83 @@
+---
+import Logo from "./Logo.astro";
+import { site } from "../data/site";
+import type { Locale } from "../i18n/ui";
+
+interface Props {
+  locale: Locale;
+}
+const year = new Date().getFullYear();
+---
+
+<footer class="site-footer" id="contact">
+  <div class="container inner">
+    <div class="brand">
+      <Logo class="wordmark" />
+      <p class="tag">Consult · Build · Automate · Scale</p>
+    </div>
+    <ul class="contact">
+      <li><a href={`mailto:${site.email}`}>{site.email}</a></li>
+      <li><a href={`tel:${site.phone.e164}`}>{site.phone.display}</a></li>
+      <li>
+        <a href={`https://wa.me/${site.phone.e164.replace("+", "")}`} rel="noopener" target="_blank">WhatsApp</a>
+      </li>
+      <li>{site.location}</li>
+    </ul>
+    <p class="legal">© {year} {site.legalName}. {site.registration}</p>
+  </div>
+</footer>
+
+<style>
+  .site-footer {
+    position: relative;
+    z-index: 1;
+    border-top: 1px solid var(--line);
+    background: var(--bg);
+    padding-block: var(--s-16) var(--s-8);
+  }
+  .inner {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: var(--s-8) var(--s-12);
+  }
+  .brand :global(.wordmark) {
+    height: 22px;
+    width: 150px;
+    color: var(--text);
+  }
+  .tag {
+    margin-top: var(--s-3);
+    font-size: var(--step--1);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .contact {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: var(--s-2);
+    font-size: var(--step--1);
+    color: var(--text-muted);
+  }
+  .contact a {
+    text-decoration: none;
+  }
+  .contact a:hover {
+    color: var(--accent);
+  }
+  .legal {
+    grid-column: 1 / -1;
+    padding-top: var(--s-6);
+    border-top: 1px solid var(--line);
+    font-size: var(--step--1);
+    color: var(--text-muted);
+    max-width: none;
+  }
+  @media (max-width: 640px) {
+    .inner {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

@@ -1,0 +1,316 @@
+---
+import Logo from "./Logo.astro";
+import { locales, localeMeta, localizePath, useTranslations, type Locale } from "../i18n/ui";
+
+interface Props {
+  locale: Locale;
+  /** Path of the current page without locale prefix, for the language links. */
+  path: string;
+}
+const { locale, path } = Astro.props;
+const t = useTranslations(locale);
+const home = localizePath("/", locale);
+const links = [
+  { href: `${home}#work`, label: t("nav.work") },
+  { href: `${home}#process`, label: t("nav.process") },
+  { href: `${home}#about`, label: t("nav.about") },
+  { href: `${home}#contact`, label: t("nav.contact") },
+];
+---
+
+<header class="site-header" data-site-header>
+  <div class="container bar">
+    <a class="brand" href={home} aria-label="TATVA — home">
+      <Logo class="wordmark" />
+    </a>
+
+    <nav class="primary" aria-label="Primary">
+      <ul>
+        {links.map((l) => <li><a href={l.href}>{l.label}</a></li>)}
+      </ul>
+    </nav>
+
+    <div class="tools">
+      <ul class="langs" aria-label={t("nav.language")}>
+        {
+          locales.map((l) => (
+            <li>
+              <a
+                href={localizePath(path, l)}
+                hreflang={localeMeta[l].htmlLang}
+                lang={localeMeta[l].htmlLang}
+                aria-current={l === locale ? "true" : undefined}
+                title={localeMeta[l].label}
+              >
+                {localeMeta[l].short}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+
+      <button
+        class="icon-btn"
+        type="button"
+        data-theme-toggle
+        data-label-theme={t("nav.theme")}
+        data-label-system={t("theme.system")}
+        data-label-dark={t("theme.dark")}
+        data-label-light={t("theme.light")}
+        aria-label={`${t("nav.theme")}: ${t("theme.system")}`}
+      >
+        <svg class="ic ic-system" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"></circle><path d="M12 4a8 8 0 0 1 0 16Z" class="fill"></path></svg>
+        <svg class="ic ic-dark" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"></path></svg>
+        <svg class="ic ic-light" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>
+      </button>
+
+      <button
+        class="icon-btn"
+        type="button"
+        data-sound-toggle
+        aria-pressed="false"
+        data-label-on={t("sound.on")}
+        data-label-off={t("sound.off")}
+        aria-label={t("sound.off")}
+      >
+        <svg class="ic" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4Z"></path>
+          <path class="wave" d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"></path>
+          <path class="mute" d="M16 9.5l5 5M21 9.5l-5 5"></path>
+        </svg>
+      </button>
+
+      <a class="btn btn-primary cta" href={`${home}#contact`}>{t("nav.cta")}</a>
+
+      <button
+        class="icon-btn menu-btn"
+        type="button"
+        data-menu-toggle
+        aria-expanded="false"
+        aria-controls="menu-panel"
+        data-label-open={t("nav.menu")}
+        data-label-close={t("nav.close")}
+        aria-label={t("nav.menu")}
+      >
+        <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path class="l1" d="M4 8h16"></path><path class="l2" d="M4 16h16"></path></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="menu-panel" id="menu-panel" data-menu-panel data-open="false">
+    <nav class="container" aria-label="Mobile">
+      <ul>
+        {links.map((l) => <li><a href={l.href}>{l.label}</a></li>)}
+      </ul>
+      <a class="btn btn-primary" href={`${home}#contact`}>{t("nav.cta")}</a>
+    </nav>
+  </div>
+</header>
+
+<style>
+  .site-header {
+    position: fixed;
+    inset: 0 0 auto 0;
+    z-index: 50;
+    height: var(--header-h);
+    transition: background-color var(--dur) var(--ease), border-color var(--dur) var(--ease);
+    border-bottom: 1px solid transparent;
+  }
+  .site-header[data-scrolled] {
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom-color: var(--line);
+  }
+  .bar {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    gap: var(--s-8);
+  }
+  .brand {
+    color: var(--text);
+    display: inline-flex;
+    padding: var(--s-2) 0;
+  }
+  .brand :global(.wordmark) {
+    height: 18px;
+    width: 122px;
+  }
+  .primary {
+    margin-right: auto;
+  }
+  .primary ul,
+  .langs,
+  .menu-panel ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .primary ul {
+    display: flex;
+    gap: var(--s-6);
+  }
+  .primary a,
+  .langs a {
+    text-decoration: none;
+    color: var(--text-muted);
+    font-size: var(--step--1);
+    font-weight: 500;
+    transition: color var(--dur-fast) var(--ease);
+  }
+  .primary a:hover,
+  .langs a:hover,
+  .langs a[aria-current] {
+    color: var(--text);
+  }
+  .tools {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2);
+  }
+  .langs {
+    display: flex;
+    gap: var(--s-1);
+    margin-right: var(--s-2);
+  }
+  .langs a {
+    display: inline-grid;
+    place-items: center;
+    min-width: 32px;
+    height: 32px;
+    border-radius: var(--radius);
+  }
+  .langs a[aria-current] {
+    box-shadow: inset 0 0 0 1px var(--line-strong);
+  }
+  .icon-btn {
+    display: inline-grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: var(--radius);
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+  }
+  .icon-btn:hover {
+    color: var(--text);
+    border-color: var(--line);
+  }
+  .ic {
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .ic .fill {
+    fill: currentColor;
+    stroke: none;
+  }
+  .ic-dark,
+  .ic-light {
+    display: none;
+  }
+  [data-current="dark"] .ic-system,
+  [data-current="light"] .ic-system {
+    display: none;
+  }
+  [data-current="dark"] .ic-dark,
+  [data-current="light"] .ic-light {
+    display: block;
+  }
+  [data-sound-toggle][aria-pressed="false"] .wave,
+  [data-sound-toggle][aria-pressed="true"] .mute {
+    display: none;
+  }
+  [data-sound-toggle][aria-pressed="true"] {
+    color: var(--accent);
+  }
+  .cta {
+    min-height: 40px;
+    padding: 0 var(--s-4);
+    font-size: var(--step--1);
+    margin-left: var(--s-2);
+  }
+  .menu-btn {
+    display: none;
+  }
+  .menu-btn .l1,
+  .menu-btn .l2 {
+    transition: transform var(--dur) var(--ease);
+    transform-origin: center;
+  }
+  .menu-btn[aria-expanded="true"] .l1 {
+    transform: translateY(4px) rotate(45deg);
+  }
+  .menu-btn[aria-expanded="true"] .l2 {
+    transform: translateY(-4px) rotate(-45deg);
+  }
+  .menu-panel {
+    display: none;
+  }
+
+  @media (max-width: 959px) {
+    .primary,
+    .cta {
+      display: none;
+    }
+    .tools {
+      margin-left: auto;
+    }
+    .menu-btn {
+      display: inline-grid;
+    }
+    .menu-panel {
+      display: block;
+      position: fixed;
+      inset: var(--header-h) 0 0 0;
+      background: var(--bg);
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(-8px);
+      transition: opacity var(--dur) var(--ease), transform var(--dur) var(--ease), visibility var(--dur);
+    }
+    .menu-panel[data-open="true"] {
+      opacity: 1;
+      visibility: visible;
+      transform: none;
+    }
+    .menu-panel nav {
+      padding-block: var(--s-8);
+      display: grid;
+      gap: var(--s-8);
+    }
+    .menu-panel ul {
+      display: grid;
+      gap: var(--s-2);
+    }
+    .menu-panel ul a {
+      display: block;
+      padding: var(--s-3) 0;
+      font-family: var(--font-display);
+      font-size: var(--step-2);
+      font-weight: 700;
+      text-decoration: none;
+      border-bottom: 1px solid var(--line);
+    }
+  }
+  @media (max-width: 420px) {
+    .langs {
+      margin-right: 0;
+    }
+    .langs a {
+      min-width: 28px;
+    }
+    .icon-btn {
+      width: 36px;
+    }
+  }
+</style>

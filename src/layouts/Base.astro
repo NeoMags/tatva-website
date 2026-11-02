@@ -1,0 +1,140 @@
+---
+import "@fontsource-variable/montserrat";
+import "@fontsource-variable/inter";
+import "@fontsource/noto-sans-kannada/400.css";
+import "@fontsource/noto-sans-kannada/700.css";
+import "@fontsource/noto-sans-devanagari/400.css";
+import "@fontsource/noto-sans-devanagari/700.css";
+import "../styles/global.css";
+import Header from "../components/Header.astro";
+import { locales, localeMeta, localizePath, useTranslations, type Locale } from "../i18n/ui";
+
+interface Props {
+  locale: Locale;
+  /** Page path without locale prefix, e.g. "/" or "/work/fleet-management" */
+  path: string;
+  title?: string;
+  description?: string;
+}
+const { locale, path } = Astro.props;
+const t = useTranslations(locale);
+const title = Astro.props.title ?? t("meta.title");
+const description = Astro.props.description ?? t("meta.description");
+const site = Astro.site ?? new URL("https://tatva.pages.dev");
+const canonical = new URL(localizePath(path, locale), site).href;
+---
+
+<!doctype html>
+<html lang={localeMeta[locale].htmlLang} data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    {locales.map((l) => <link rel="alternate" hreflang={localeMeta[l].htmlLang} href={new URL(localizePath(path, l), site).href} />)}
+    <link rel="alternate" hreflang="x-default" href={new URL(localizePath(path, "en"), site).href} />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <meta name="theme-color" content="#061C18" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="TATVA" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta name="twitter:card" content="summary_large_image" />
+    {!localeMeta[locale].reviewed && <meta name="robots" content="noindex" />}
+    <script is:inline>
+      // Apply the saved theme before first paint to avoid a flash.
+      try {
+        var t = localStorage.getItem("tatva-theme");
+        if (t === "dark" || t === "light" || t === "system") document.documentElement.dataset.theme = t;
+      } catch (e) {}
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) document.documentElement.dataset.scene = "static";
+    </script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">{t("nav.skip")}</a>
+    <div class="scene-layer" aria-hidden="true"><canvas id="scene"></canvas></div>
+    <Header locale={locale} path={path} />
+    <main id="main">
+      <slot />
+    </main>
+
+    <script>
+      import { detectTier } from "../scripts/scene/capability";
+      import { initHeader } from "../scripts/ui/header";
+
+      initHeader();
+
+      const root = document.documentElement;
+      const canvas = document.getElementById("scene") as HTMLCanvasElement | null;
+      const tier = detectTier();
+      root.dataset.tier = tier;
+
+      if (tier === "static" || !canvas || !document.querySelector("[data-scene-hero]")) {
+        root.dataset.scene = "static";
+      } else {
+        const load = () =>
+          import("../scripts/scene/index")
+            .then((m) => m.mountScene(canvas, tier))
+            .catch((err) => {
+              console.warn("3D scene unavailable, showing still drawings.", err);
+              root.dataset.scene = "static";
+            });
+        // Text first, 3D second: wait until the browser is idle.
+        if ("requestIdleCallback" in window) requestIdleCallback(load, { timeout: 1200 });
+        else setTimeout(load, 300);
+      }
+    </script>
+
+    <style is:global>
+      .scene-layer {
+        position: fixed;
+        inset: 0;
+        z-index: 0;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 900ms var(--ease);
+      }
+      .scene-layer canvas {
+        width: 100%;
+        height: 100%;
+      }
+      html[data-scene="live"] .scene-layer {
+        opacity: 1;
+      }
+      main {
+        position: relative;
+        z-index: 1;
+      }
+      /* Still drawings: shown until (or unless) the live scene takes over. */
+      .scene-fallback {
+        transition: opacity 700ms var(--ease);
+      }
+      html[data-scene="live"] .scene-fallback {
+        opacity: 0;
+        visibility: hidden;
+      }
+      .scene-fallback .sv-face {
+        fill: var(--surface);
+      }
+      .scene-fallback .sv-edge {
+        fill: none;
+        stroke: var(--accent);
+        stroke-width: 1.4;
+        stroke-linejoin: round;
+        vector-effect: non-scaling-stroke;
+      }
+      .scene-fallback .sv-net {
+        fill: none;
+        stroke: var(--accent-2);
+        stroke-width: 1;
+        opacity: 0.6;
+        vector-effect: non-scaling-stroke;
+      }
+      .scene-fallback .sv-node {
+        fill: var(--accent-2);
+      }
+    </style>
+  </body>
+</html>
