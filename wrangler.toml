@@ -1,13 +1,16 @@
-# Cloudflare Pages configuration. Secrets are set in the dashboard, not here.
-name = "tatva"
+# Cloudflare Pages configuration. Secrets are set in the dashboard, never here.
+# `name` must match the Pages project name.
+name = "tatva-website"
 pages_build_output_dir = "dist"
 compatibility_date = "2026-10-01"
 
-[[d1_databases]]
-binding = "DB"
-database_name = "tatva"
-database_id = "REPLACE_AFTER_CREATING_THE_DATABASE"
-migrations_dir = "migrations"
+# D1 database for enquiries and assistant requests.
+# Turn on after creating the database: paste its id (not a secret) and uncomment.
+# [[d1_databases]]
+# binding = "DB"
+# database_name = "tatva"
+# database_id = "PASTE_DATABASE_ID_HERE"
+# migrations_dir = "migrations"
 
 # Workers AI (speech-to-text for voice notes). Free daily allowance: 10,000 neurons.
 [ai]

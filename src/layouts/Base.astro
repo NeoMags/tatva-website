@@ -23,7 +23,7 @@ const { locale, path, localized = true } = Astro.props;
 const t = useTranslations(locale);
 const title = Astro.props.title ?? t("meta.title");
 const description = Astro.props.description ?? t("meta.description");
-const site = Astro.site ?? new URL("https://tatva.pages.dev");
+const site = Astro.site ?? new URL("https://tatva-website.pages.dev");
 const canonical = new URL(localizePath(path, locale), site).href;
 ---
 
