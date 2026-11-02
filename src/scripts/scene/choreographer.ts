@@ -174,7 +174,9 @@ export class Choreographer {
     const k = first ? 1 : 1 - Math.exp(-6 * dt);
     this.enter = lerp(this.enter, raw.enter, k);
     this.disc = lerp(this.disc, raw.disc, k);
-    this.visibility = lerp(this.visibility, raw.visibility, k);
+    this.visibility = clamp01(lerp(this.visibility, raw.visibility, k));
+    this.enter = clamp01(this.enter);
+    this.disc = clamp01(this.disc);
 
     if (!window.matchMedia("(hover: hover)").matches) {
       // No hover pointer on touch screens: a slow sway stands in for it.

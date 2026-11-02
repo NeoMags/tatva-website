@@ -84,8 +84,10 @@ export function mountScene(canvas: HTMLCanvasElement, tier: Exclude<SceneTier, "
       first = false;
       document.documentElement.dataset.scene = "live";
     }
-    canvas.style.opacity = String(f.visibility);
-    return f.visibility > 0.001;
+    canvas.style.opacity = String(Math.min(1, Math.max(0, f.visibility)));
+    // Keep running while the scene is visible OR on its way back into view; checking only
+    // the smoothed value would put the loop back to sleep on the first frame after waking.
+    return choreo.visible;
   });
 
   const wake = () => {

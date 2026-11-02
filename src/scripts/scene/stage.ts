@@ -110,7 +110,7 @@ export class Stage {
   wake(): void {
     if (this.running || document.hidden) return;
     this.running = true;
-    this.last = performance.now();
+    this.last = -1; // the first frame after waking measures from itself (dt = 0)
     this.frameId = requestAnimationFrame(this.tick);
   }
 
@@ -121,8 +121,10 @@ export class Stage {
 
   private tick = (now: number): void => {
     if (!this.running) return;
-    // Clamp dt so a long pause (tab switch, debugger) never causes a jump.
-    const dt = Math.min((now - this.last) / 1000, 1 / 20);
+    // dt must never be negative: the rAF timestamp can be earlier than the moment the
+    // loop was woken, and a negative step makes every smoothing run backwards.
+    // Clamp the top too, so a long pause (tab switch, debugger) never causes a jump.
+    const dt = this.last < 0 ? 0 : Math.min(Math.max((now - this.last) / 1000, 0), 1 / 20);
     this.last = now;
     this.key.position.lerp(this.keyTarget, 1 - Math.exp(-4 * dt));
     const keepRunning = this.onFrame?.(dt, now / 1000);
