@@ -144,7 +144,7 @@ const steps = [1, 2, 3, 4, 5, 6, 7].map((n) => ({
     position: relative;
     width: 64px;
     height: 64px;
-    border-radius: 50%;
+    /* masks the connecting line behind the glyph; no visible shape of its own */
     background: var(--bg);
     display: grid;
     place-items: center;
@@ -204,11 +204,10 @@ const steps = [1, 2, 3, 4, 5, 6, 7].map((n) => ({
   }
   .step .glyph,
   .step h3 {
-    transition: transform var(--dur-slow) var(--ease), color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+    transition: transform var(--dur-slow) var(--ease), color var(--dur) var(--ease);
   }
   .step[data-current] .glyph {
     transform: scale(1.12);
-    box-shadow: 0 0 0 1px var(--accent), 0 0 24px var(--accent-soft);
   }
   .glyph :global(svg) {
     animation: float 6s ease-in-out infinite;

@@ -22,7 +22,8 @@ body {
   line-height: 1.6;
   font-optical-sizing: auto;
   -webkit-font-smoothing: antialiased;
-  transition: background-color var(--dur) var(--ease), color var(--dur) var(--ease);
+  /* No colour transition on theme change: the page and the 3D scene must switch in the
+     same frame, or the tesseract's lines briefly match the background and disappear. */
 }
 
 h1,

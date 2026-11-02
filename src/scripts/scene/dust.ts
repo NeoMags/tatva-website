@@ -31,8 +31,11 @@ export class Dust {
 
   setPalette(p: ScenePalette): void {
     this.object.material.color.copy(p.dust);
-    this.object.material.blending = p.isLight ? NormalBlending : AdditiveBlending;
-    this.object.material.needsUpdate = true;
+    const blending = p.isLight ? NormalBlending : AdditiveBlending;
+    if (this.object.material.blending !== blending) {
+      this.object.material.blending = blending;
+      this.object.material.needsUpdate = true;
+    }
   }
 
   /**

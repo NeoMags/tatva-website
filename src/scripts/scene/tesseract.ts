@@ -204,11 +204,15 @@ export class Tesseract {
     this.core.material.color.copy(p.core);
     this.core.material.emissive.copy(p.core).multiplyScalar(p.isLight ? 0.05 : 0.18);
     this.planes.material.color.copy(p.plane);
-    this.planes.material.blending = p.isLight ? NormalBlending : AdditiveBlending;
-    this.planes.material.needsUpdate = true;
     this.pulses.material.color.copy(p.accent);
-    this.pulses.material.blending = p.isLight ? NormalBlending : AdditiveBlending;
-    this.pulses.material.needsUpdate = true;
+    // Changing blending forces a shader rebuild; only do it when it actually changes.
+    const blending = p.isLight ? NormalBlending : AdditiveBlending;
+    for (const m of [this.planes.material, this.pulses.material]) {
+      if (m.blending !== blending) {
+        m.blending = blending;
+        m.needsUpdate = true;
+      }
+    }
     for (let i = 0; i < SILHOUETTE.length; i++) this.nodes.setColorAt(i, this.nodeColor);
     if (this.nodes.instanceColor) this.nodes.instanceColor.needsUpdate = true;
   }
