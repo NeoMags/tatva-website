@@ -12,8 +12,8 @@ const year = new Date().getFullYear();
 <footer class="site-footer" id="contact">
   <div class="container inner">
     <div class="brand">
-      <Logo class="wordmark" />
-      <p class="tag">Consult · Build · Automate · Scale</p>
+      <Logo variant="lockup" id="footer-logo" />
+      <p class="tag">The architecture of possibility · Build · Connect · Expand</p>
     </div>
     <ul class="contact">
       <li><a href={`mailto:${site.email}`}>{site.email}</a></li>
@@ -40,10 +40,8 @@ const year = new Date().getFullYear();
     grid-template-columns: 1fr auto;
     gap: var(--s-8) var(--s-12);
   }
-  .brand :global(.wordmark) {
-    height: 22px;
-    width: 150px;
-    color: var(--text);
+  .brand :global(.logo) {
+    font-size: 24px;
   }
   .tag {
     margin-top: var(--s-3);

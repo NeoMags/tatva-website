@@ -35,7 +35,7 @@ const canonical = new URL(localizePath(path, locale), site).href;
     {locales.map((l) => <link rel="alternate" hreflang={localeMeta[l].htmlLang} href={new URL(localizePath(path, l), site).href} />)}
     <link rel="alternate" hreflang="x-default" href={new URL(localizePath(path, "en"), site).href} />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <meta name="theme-color" content="#061C18" />
+    <meta name="theme-color" content="#050505" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="TATVA" />
     <meta property="og:title" content={title} />
@@ -115,25 +115,14 @@ const canonical = new URL(localizePath(path, locale), site).href;
         opacity: 0;
         visibility: hidden;
       }
-      .scene-fallback .sv-face {
-        fill: var(--surface);
-      }
-      .scene-fallback .sv-edge {
-        fill: none;
-        stroke: var(--accent);
-        stroke-width: 1.4;
-        stroke-linejoin: round;
-        vector-effect: non-scaling-stroke;
-      }
-      .scene-fallback .sv-net {
-        fill: none;
-        stroke: var(--accent-2);
-        stroke-width: 1;
-        opacity: 0.6;
-        vector-effect: non-scaling-stroke;
-      }
-      .scene-fallback .sv-node {
-        fill: var(--accent-2);
+      /* Emerald-glow emblem variant (the coloured logo, gold replaced by emerald). */
+      .emblem--emerald {
+        --emblem-line: var(--emerald);
+        --emblem-node: #b8ffe6;
+        --emblem-core-top: rgb(0 195 137 / 0.85);
+        --emblem-core-side: rgb(0 195 137 / 0.6);
+        --emblem-core-front: rgb(0 195 137 / 0.42);
+        filter: drop-shadow(0 0 6px rgb(0 195 137 / 0.55));
       }
     </style>
   </body>

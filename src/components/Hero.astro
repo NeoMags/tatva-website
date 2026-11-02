@@ -1,6 +1,6 @@
 ---
-import { localizePath, useTranslations, type Locale } from "../i18n/ui";
-import { assembledSculptureSVG } from "../lib/sculpture-svg";
+import { localizePath, useTranslations, type Locale, type UIKey } from "../i18n/ui";
+import { emblemSVG } from "../lib/emblem";
 
 interface Props {
   locale: Locale;
@@ -8,53 +8,90 @@ interface Props {
 const { locale } = Astro.props;
 const t = useTranslations(locale);
 const home = localizePath("/", locale);
-const words = (s: string) => s.split(" ");
-const line1 = words(t("hero.title.1"));
-const line2 = words(t("hero.title.2"));
-const fallback = assembledSculptureSVG(t("hero.sculpture.alt"));
+const chain = [1, 2, 3, 4, 5].map((n) => t(`meaning.chain.${n}` as UIKey));
+const fallback = emblemSVG({ id: "hero-emblem", label: t("hero.emblem.alt") });
 ---
 
 <section class="hero" data-scene-hero aria-labelledby="hero-title">
   <div class="sticky">
     <div class="container grid">
-      <div class="copy">
-        <p class="eyebrow reveal" style="--d: 0">{t("hero.eyebrow")}</p>
-        <h1 id="hero-title">
-          <span class="line">
-            {line1.map((w, i) => <><span class="word" style={`--d:${i + 1}`}>{w}</span>{" "}</>)}
-          </span>
-          <span class="line accent">
-            {line2.map((w, i) => <><span class="word" style={`--d:${i + 1 + line1.length}`}>{w}</span>{" "}</>)}
-          </span>
-        </h1>
-        <p class="lead reveal" style="--d: 8">{t("hero.lead")}</p>
-        <p class="body reveal" style="--d: 9">{t("hero.body")}</p>
-        <div class="ctas reveal" style="--d: 10">
-          <a class="btn btn-primary" href={`${home}#work`}>
+      <div class="identity">
+        <svg class="word reveal" style="--d:0" viewBox="-6 -6 722 112" role="img" aria-label="TATVA">
+          <g fill="none" stroke="currentColor" stroke-width="10" stroke-miterlimit="10">
+            <path d="M0 6H110M55 6V100"></path><path d="M150 100L205 9L260 100"></path>
+            <path d="M300 6H410M355 6V100"></path><path d="M450 0L505 91L560 0"></path>
+            <path d="M600 100L655 9L710 100"></path>
+          </g>
+        </svg>
+        <h1 id="hero-title" class="reveal" style="--d:2">{t("hero.title")}</h1>
+        <p class="tagline reveal" style="--d:3" aria-label="Build, Connect, Expand">
+          <span>Build</span><span>Connect</span><span>Expand</span>
+        </p>
+        <p class="lead reveal" style="--d:4">{t("hero.lead")}</p>
+        <div class="ctas reveal" style="--d:5">
+          <a class="btn btn-primary" href={`${home}#disciplines`}>
             {t("hero.cta.primary")} <span class="arrow" aria-hidden="true">→</span>
           </a>
-          <a class="btn btn-ghost" href={`${home}#contact`}>{t("hero.cta.secondary")}</a>
+          <a class="btn btn-ghost" href={`${home}#work`}>{t("hero.cta.secondary")}</a>
         </div>
       </div>
 
       <div class="visual" data-anchor="hero">
         <div class="scene-fallback" set:html={fallback} />
       </div>
+
+      <aside class="meaning" aria-label={t("meaning.label")} data-parallax>
+        <p class="term reveal" style="--d:6">
+          <span class="latin">TATVA</span>
+          <span class="slash" aria-hidden="true">/</span>
+          <span class="deva" lang="sa">तत्त्व</span>
+        </p>
+        <p class="essence reveal" style="--d:7">{t("meaning.essence")}</p>
+        <ol class="chain">
+          {
+            chain.map((word, i) => (
+              <li class="reveal" style={`--d:${8 + i}`}>
+                <span class="dot" aria-hidden="true" />
+                {word}
+              </li>
+            ))
+          }
+        </ol>
+      </aside>
     </div>
 
-    <div class="container foot reveal" style="--d: 12">
-      <p class="pillars-line" aria-label="Consult, Build, Automate, Scale">
-        <span>Consult</span><span>Build</span><span>Automate</span><span>Scale</span>
-      </p>
+    <div class="container foot reveal" style="--d:14">
       <p class="scroll-hint"><span class="tick" aria-hidden="true"></span>{t("hero.scroll")}</p>
     </div>
   </div>
 </section>
 
+<script>
+  // The meaning panel drifts a few pixels with the pointer, so it reads as a layer in front of the scene.
+  const panel = document.querySelector<HTMLElement>("[data-parallax]");
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const fine = window.matchMedia("(hover: hover)").matches;
+  if (panel && !reduce && fine) {
+    let raf = 0;
+    window.addEventListener(
+      "pointermove",
+      (e) => {
+        cancelAnimationFrame(raf);
+        raf = requestAnimationFrame(() => {
+          const x = (e.clientX / window.innerWidth - 0.5) * -10;
+          const y = (e.clientY / window.innerHeight - 0.5) * -8;
+          panel.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+        });
+      },
+      { passive: true },
+    );
+  }
+</script>
+
 <style>
   .hero {
     position: relative;
-    height: 220vh;
+    height: 230vh;
   }
   :global(html[data-scene="static"]) .hero {
     height: auto;
@@ -70,82 +107,164 @@ const fallback = assembledSculptureSVG(t("hero.sculpture.alt"));
   }
   .grid {
     display: grid;
-    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+    grid-template-columns: minmax(0, 5fr) minmax(0, 5fr) minmax(0, 3fr);
     align-items: center;
     gap: var(--s-8);
   }
-  .copy {
+  .identity {
     display: grid;
     gap: var(--s-6);
     padding-block: var(--s-8);
   }
+  .word {
+    width: min(100%, 22rem);
+    height: auto;
+    color: var(--text-strong);
+  }
   h1 {
-    font-size: var(--step-4);
-    font-weight: 700;
+    font-size: var(--step-3);
+    font-weight: 600;
+    color: var(--text-strong);
+    max-width: 14ch;
   }
-  .line {
-    display: block;
+  .tagline {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--s-3);
+    font-family: var(--font-display);
+    font-size: var(--step--1);
+    font-weight: 500;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    color: var(--text-muted);
   }
-  .line.accent {
-    color: var(--accent);
+  .tagline span + span::before {
+    content: "";
+    display: inline-block;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--accent);
+    margin-right: var(--s-3);
+    vertical-align: 0.2em;
   }
   .lead {
     font-size: var(--step-1);
     line-height: 1.45;
-    max-width: 34ch;
     color: var(--text);
-  }
-  .body {
-    color: var(--text-muted);
-    max-width: 52ch;
+    max-width: 30ch;
   }
   .ctas {
     display: flex;
     flex-wrap: wrap;
     gap: var(--s-3);
-    margin-top: var(--s-2);
   }
   .visual {
     position: relative;
     aspect-ratio: 1;
     width: 100%;
-    max-width: 560px;
-    justify-self: end;
+    max-width: 520px;
+    max-height: 70svh;
+    justify-self: center;
   }
   .scene-fallback {
     position: absolute;
-    inset: 0;
+    inset: 8%;
   }
   .scene-fallback :global(svg) {
     width: 100%;
     height: 100%;
   }
-  .foot {
+
+  /* Meaning panel: an editorial note, not a card. A single hairline on its left edge. */
+  .meaning {
+    display: grid;
+    gap: var(--s-4);
+    padding-left: var(--s-6);
+    border-left: 1px solid var(--line-strong);
+    transition: transform 600ms var(--ease);
+  }
+  .term {
     display: flex;
-    justify-content: space-between;
+    align-items: baseline;
+    gap: var(--s-2);
+    font-family: var(--font-display);
+    font-size: var(--step-1);
+    font-weight: 600;
+    color: var(--text-strong);
+  }
+  .latin {
+    letter-spacing: 0.2em;
+  }
+  .slash {
+    color: var(--text-muted);
+    font-weight: 300;
+  }
+  .deva {
+    font-family: "Noto Sans Devanagari", var(--font-body);
+    font-weight: 400;
+  }
+  .essence {
+    color: var(--text-muted);
+    font-size: var(--step-0);
+    line-height: 1.5;
+  }
+  .chain {
+    list-style: none;
+    margin: var(--s-2) 0 0;
+    padding: 0;
+    display: grid;
+    gap: var(--s-3);
+    position: relative;
+  }
+  .chain::before {
+    /* the line that connects the five stages */
+    content: "";
+    position: absolute;
+    left: 3px;
+    top: 0.7em;
+    bottom: 0.7em;
+    width: 1px;
+    background: linear-gradient(var(--line-strong), var(--accent));
+  }
+  .chain li {
+    display: flex;
     align-items: center;
     gap: var(--s-4);
-    padding-block: var(--s-6);
-    border-top: 1px solid var(--line);
-  }
-  .pillars-line {
-    display: flex;
-    gap: var(--s-6);
     font-family: var(--font-display);
     font-size: var(--step--1);
     font-weight: 600;
-    letter-spacing: 0.22em;
+    letter-spacing: 0.24em;
     text-transform: uppercase;
-    color: var(--text-muted);
+    color: var(--text);
   }
-  .pillars-line span + span::before {
-    content: "";
-    display: inline-block;
-    width: 1px;
-    height: 0.9em;
-    background: var(--accent-2);
-    margin-right: var(--s-6);
-    vertical-align: -0.1em;
+  :global(:lang(kn)) .chain li,
+  :global(:lang(hi)) .chain li {
+    letter-spacing: 0.04em;
+    font-size: var(--step-0);
+  }
+  .dot {
+    position: relative;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--bg);
+    box-shadow: inset 0 0 0 1px var(--text-muted);
+    flex: none;
+  }
+  .chain li:last-child .dot {
+    background: var(--accent);
+    box-shadow: none;
+  }
+  .chain li:last-child {
+    color: var(--accent);
+  }
+
+  .foot {
+    display: flex;
+    justify-content: flex-end;
+    padding-block: var(--s-6);
   }
   .scroll-hint {
     display: flex;
@@ -165,24 +284,12 @@ const fallback = assembledSculptureSVG(t("hero.sculpture.alt"));
     display: none;
   }
 
-  /* Entrance: words rise in sequence; everything else fades up. */
-  .word,
+  /* Entrance: each part fades up in sequence. */
   .reveal {
-    display: inline-block;
     opacity: 0;
-    transform: translateY(0.4em);
+    transform: translateY(10px);
     animation: rise 900ms var(--ease) forwards;
-    animation-delay: calc(var(--d) * 70ms + 150ms);
-  }
-  .reveal {
-    display: block;
-    transform: translateY(12px);
-  }
-  .ctas.reveal {
-    display: flex;
-  }
-  .foot.reveal {
-    display: flex;
+    animation-delay: calc(var(--d) * 90ms + 200ms);
   }
   @keyframes rise {
     to {
@@ -203,9 +310,47 @@ const fallback = assembledSculptureSVG(t("hero.sculpture.alt"));
     }
   }
 
-  @media (max-width: 959px) {
-    /* Phones: no pinning — the hero content is taller than the screen.
-       The elements assemble as the sculpture scrolls into view instead. */
+  @media (max-width: 1199px) {
+    .grid {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    }
+    .meaning {
+      grid-column: 1 / -1;
+      border-left: 0;
+      border-top: 1px solid var(--line);
+      padding: var(--s-4) 0 0;
+      grid-template-columns: auto 1fr;
+      column-gap: var(--s-8);
+      align-items: center;
+    }
+    .essence {
+      grid-column: 2;
+      grid-row: 1;
+    }
+    .chain {
+      grid-column: 1 / -1;
+      grid-auto-flow: column;
+      justify-content: start;
+      gap: var(--s-6);
+    }
+    .chain::before {
+      left: 0;
+      right: 0;
+      top: 50%;
+      bottom: auto;
+      width: auto;
+      height: 1px;
+      background: linear-gradient(90deg, var(--line-strong), var(--accent));
+    }
+    .chain li {
+      background: var(--bg);
+      padding-right: var(--s-2);
+      position: relative;
+    }
+  }
+
+  @media (max-width: 759px) {
+    /* Phones: no pinning; the hero is taller than the screen. */
     .hero {
       height: auto;
     }
@@ -215,34 +360,44 @@ const fallback = assembledSculptureSVG(t("hero.sculpture.alt"));
     }
     .grid {
       grid-template-columns: 1fr;
-      align-content: start;
       gap: 0;
     }
-    .copy {
-      padding-block: var(--s-6) 0;
+    .identity {
+      padding-block: var(--s-6) var(--s-2);
       gap: var(--s-4);
     }
-    .body {
-      display: none;
+    .word {
+      width: 13rem;
     }
     .visual {
-      justify-self: center;
-      max-width: min(78vw, 42svh);
-      margin-top: var(--s-4);
+      max-width: min(86vw, 46svh);
+      margin-block: var(--s-4);
+    }
+    .meaning {
+      grid-template-columns: 1fr;
+    }
+    .essence {
+      grid-column: 1;
+      grid-row: auto;
+    }
+    .chain {
+      grid-auto-flow: row;
+      gap: var(--s-3);
+    }
+    .chain::before {
+      left: 3px;
+      right: auto;
+      top: 0.7em;
+      bottom: 0.7em;
+      width: 1px;
+      height: auto;
+      background: linear-gradient(var(--line-strong), var(--accent));
+    }
+    .chain li {
+      background: none;
     }
     .foot {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: var(--s-2);
-      padding-block: var(--s-4);
-    }
-    .pillars-line {
-      gap: var(--s-3);
-      letter-spacing: 0.14em;
-      font-size: 0.75rem;
-    }
-    .pillars-line span + span::before {
-      margin-right: var(--s-3);
+      display: none;
     }
   }
 </style>

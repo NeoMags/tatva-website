@@ -1,5 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="12" fill="#061C18"/>
-  <path d="M8 54L28 12H36L56 54H48L32 21L16 54Z" fill="#F5F5EF"/>
-  <path d="M22 54H29L36 39H29Z" fill="#9BCB72"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-60 -60 120 120">
+  <rect x="-60" y="-60" width="120" height="120" rx="20" fill="#050505"/>
+  <g fill="none" stroke="#fff" stroke-width="4" stroke-linejoin="round">
+    <path d="M0 -46L39.8 -23L39.8 23L0 46L-39.8 23L-39.8 -23Z"/>
+    <path d="M0 -46V-20M39.8 -23L17.3 -10M39.8 23L17.3 10M0 46V20M-39.8 23L-17.3 10M-39.8 -23L-17.3 -10"/>
+  </g>
+  <path d="M0 -20L17.3 -10L0 0L-17.3 -10Z" fill="#fff"/>
+  <path d="M17.3 -10L17.3 10L0 20L0 0Z" fill="#bdbdbd"/>
+  <path d="M-17.3 -10L0 0L0 20L-17.3 10Z" fill="#8a8a8a"/>
+  <g fill="#00C389"><circle cx="0" cy="-46" r="7"/><circle cx="39.8" cy="-23" r="7"/><circle cx="39.8" cy="23" r="7"/><circle cx="0" cy="46" r="7"/><circle cx="-39.8" cy="23" r="7"/><circle cx="-39.8" cy="-23" r="7"/></g>
 </svg>

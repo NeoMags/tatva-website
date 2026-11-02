@@ -2,11 +2,13 @@
 import { Color } from "three";
 
 export interface ScenePalette {
-  solid: Color;
-  edge: Color;
+  line: Color;
   node: Color;
+  core: Color;
+  plane: Color;
+  dust: Color;
+  accent: Color;
   ambient: Color;
-  light: Color;
   isLight: boolean;
 }
 
@@ -20,14 +22,16 @@ function token(styles: CSSStyleDeclaration, name: string, fallback: string): Col
 }
 
 export function readPalette(): ScenePalette {
-  const styles = getComputedStyle(document.documentElement);
-  const bg = token(styles, "--bg", "#061c18");
+  const s = getComputedStyle(document.documentElement);
+  const bg = token(s, "--bg", "#050505");
   return {
-    solid: token(styles, "--scene-solid", "#0b5745"),
-    edge: token(styles, "--scene-edge", "#9bcb72"),
-    node: token(styles, "--scene-node", "#c8b78b"),
-    ambient: token(styles, "--scene-ambient", "#0e3a30"),
-    light: new Color("#f5f5ef"),
+    line: token(s, "--scene-line", "#e6e6e6"),
+    node: token(s, "--scene-node", "#f2f2f2"),
+    core: token(s, "--scene-core", "#d9d9d9"),
+    plane: token(s, "--scene-plane", "#ffffff"),
+    dust: token(s, "--scene-dust", "#9a9a9a"),
+    accent: token(s, "--scene-accent", "#00c389"),
+    ambient: token(s, "--scene-ambient", "#151515"),
     isLight: bg.getHSL({ h: 0, s: 0, l: 0 }).l > 0.5,
   };
 }

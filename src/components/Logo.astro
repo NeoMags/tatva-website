@@ -1,26 +1,59 @@
 ---
 /**
- * TATVA wordmark, redrawn as vector from the business card.
- * Letters use currentColor; the two accent strokes use the theme accent,
- * so the mark works on dark and light backgrounds.
+ * TATVA logo. `wordmark` = letters only; `lockup` = emblem + letters (header);
+ * `emblem` = the tesseract emblem alone.
+ * The letters are thin geometric strokes redrawn from the approved logo;
+ * they use currentColor so they follow the theme.
  */
+import { emblemSVG } from "../lib/emblem";
+
 interface Props {
+  variant?: "wordmark" | "lockup" | "emblem";
   class?: string;
-  title?: string;
+  id?: string;
 }
-const { class: className, title = "TATVA" } = Astro.props;
+const { variant = "lockup", class: className, id = "logo" } = Astro.props;
+const emblem = emblemSVG({ id: `${id}-emblem` });
 ---
 
-<svg class={className} viewBox="0 0 1360 200" role="img" aria-label={title} xmlns="http://www.w3.org/2000/svg">
-  <g fill="currentColor">
-    <path d="M0 0H230V36H133V200H97V36H0Z"></path>
-    <path d="M250 200L368 0H412L530 200H484L390 44L296 200Z"></path>
-    <path d="M555 0H785V36H688V200H652V36H555Z"></path>
-    <path d="M810 0H856L935 150L1014 0H1060L958 200H912Z"></path>
-    <path d="M1080 200L1198 0H1242L1360 200H1314L1220 44L1126 200Z"></path>
-  </g>
-  <g fill="var(--accent)">
-    <path d="M346 200H386L428 130H388Z"></path>
-    <path d="M1176 200H1216L1258 130H1218Z"></path>
-  </g>
-</svg>
+<span class:list={["logo", `logo--${variant}`, className]}>
+  {variant !== "wordmark" && <span class="logo-emblem" set:html={emblem} />}
+  {
+    variant !== "emblem" && (
+      <svg class="logo-word" viewBox="-6 -6 722 112" role="img" aria-label="TATVA" xmlns="http://www.w3.org/2000/svg">
+        <g fill="none" stroke="currentColor" stroke-width="12" stroke-linejoin="miter" stroke-miterlimit="10">
+          <path d="M0 6H110M55 6V100" />
+          <path d="M150 100L205 9L260 100" />
+          <path d="M300 6H410M355 6V100" />
+          <path d="M450 0L505 91L560 0" />
+          <path d="M600 100L655 9L710 100" />
+        </g>
+      </svg>
+    )
+  }
+</span>
+
+<style>
+  .logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6em;
+    color: var(--text-strong);
+    line-height: 1;
+  }
+  .logo-emblem {
+    display: inline-block;
+    width: 1.9em;
+    height: 1.9em;
+    flex: none;
+  }
+  .logo-emblem :global(svg) {
+    width: 100%;
+    height: 100%;
+  }
+  .logo-word {
+    height: 0.9em;
+    width: auto;
+    aspect-ratio: 722 / 112;
+  }
+</style>

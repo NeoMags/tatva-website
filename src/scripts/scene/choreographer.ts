@@ -1,97 +1,95 @@
 /**
- * Turns page state (scroll position, anchors in the layout, pointer, hovered pillar)
- * into targets for the sculpture. The page layout decides WHERE things go, through
- * empty anchor elements; this module only decides HOW the sculpture moves between them.
+ * Turns page state (time, scroll, anchors in the layout, pointer, hovered
+ * discipline) into a pose for the tesseract. The page layout decides WHERE the
+ * tesseract sits, through empty anchor boxes; this module decides HOW it moves.
  *
  * DOM contract
- *   [data-scene-hero]            tall hero track; scrolling through it assembles the elements
- *   [data-anchor="hero"]         box the sculpture occupies in the hero
- *   [data-scene-pillars]         the pillars section
- *   [data-anchor-pillar="<id>"]  one box per pillar; the matching solid moves there
- *   [data-pillar="<id>"]         hover/focus target that highlights that pillar's solid
- *   [data-scene-end]             once this reaches the top, the scene fades out and sleeps
+ *   [data-scene-hero]          hero track; scrolling through it carries the visitor into the tesseract
+ *   [data-anchor="hero"]       box the tesseract occupies in the hero
+ *   [data-scene-disciplines]   the disciplines section
+ *   [data-anchor="disciplines"] box the tesseract occupies there (logo pose, nodes = disciplines)
+ *   [data-discipline="0..5"]   hover/focus target; lights that discipline's node
+ *   [data-scene-end]           once this reaches the top, the scene fades out and sleeps
  */
-import { Vector3 } from "three";
-import { PILLAR_ORDER, type PillarId } from "./elements";
-import type { SculptureTargets } from "./sculpture";
+import { Quaternion, Vector3 } from "three";
 import type { Stage } from "./stage";
+import type { TesseractState } from "./tesseract";
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 const smooth = (t: number) => t * t * (3 - 2 * t);
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
-/** Ease with a slight overshoot — the "snap" when the elements lock together. */
-const easeOutBack = (t: number) => {
-  const c = 1.4;
-  return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2);
-};
 
-/** Loose starting positions, as fractions of the hero box size. */
-const SCATTER: ReadonlyArray<[number, number, number]> = [
-  [-0.3, 0.24, 0.1],
-  [0.28, 0.3, -0.5],
-  [-0.22, -0.28, 0.4],
-  [0.3, -0.2, 0.15],
-];
-/** Assembled positions: the four vertices of a tetrahedron. */
-const ASSEMBLED: ReadonlyArray<[number, number, number]> = [
-  [1, 1, 1],
-  [1, -1, -1],
-  [-1, 1, -1],
-  [-1, -1, 1],
-].map(([x, y, z]) => [x / Math.sqrt(3), y / Math.sqrt(3), z / Math.sqrt(3)] as [number, number, number]);
+/** Distance from the centre to a hexagon corner, in tesseract units (√(8/3)). */
+const HEX_RADIUS = Math.sqrt(8 / 3);
+/** How long the opening build-up takes, in seconds. */
+const BUILD_SECONDS = 2.8;
 
 export interface ChoreographyEvents {
-  onAssembled?: () => void;
-  onPillarFocus?: (pillar: PillarId) => void;
+  onBuilt?: () => void;
+  onDiscipline?: (index: number) => void;
+}
+
+export interface Frame {
+  tesseract: TesseractState;
+  position: Vector3;
+  scale: number;
+  rotation: Quaternion;
+  /** forward travel into the tesseract, 0..1 */
+  travel: number;
+  pointer: { x: number; y: number };
+  /** canvas opacity, 0..1 */
+  visibility: number;
 }
 
 export class Choreographer {
-  private readonly heroTrack: HTMLElement | null;
-  private readonly heroAnchor: HTMLElement | null;
-  private readonly pillarsSection: HTMLElement | null;
-  private readonly pillarAnchors: Map<PillarId, HTMLElement>;
-  private readonly endMarker: HTMLElement | null;
+  private readonly heroTrack = document.querySelector<HTMLElement>("[data-scene-hero]");
+  private readonly heroAnchor = document.querySelector<HTMLElement>('[data-anchor="hero"]');
+  private readonly discSection = document.querySelector<HTMLElement>("[data-scene-disciplines]");
+  private readonly discAnchor = document.querySelector<HTMLElement>('[data-anchor="disciplines"]');
+  private readonly endMarker = document.querySelector<HTMLElement>("[data-scene-end]");
 
-  private assembly = 0;
-  private pillarsBlend = 0;
+  private startTime = -1;
+  private built = false;
+  private enter = 0;
+  private disc = 0;
   private visibility = 1;
-  private pointer = { x: 0, y: 0, tx: 0, ty: 0 };
-  private hovered: PillarId | null = null;
-  private armed = true;
+  private hovered = -1;
+  private readonly pointer = { x: 0, y: 0, tx: 0, ty: 0 };
 
-  private readonly targets: SculptureTargets = {
-    elements: PILLAR_ORDER.map(() => ({ position: new Vector3(), scale: 1, highlight: 1 })),
-    network: 0,
-    networkOpacity: 0,
-    nodeScale: 0,
-    spin: 1,
+  private readonly heroCentre = new Vector3();
+  private readonly discCentre = new Vector3();
+  private readonly qTilt = new Quaternion();
+  private readonly qRoll = new Quaternion();
+  private readonly qYaw = new Quaternion();
+  private readonly axisX = new Vector3(1, 0, 0);
+  private readonly axisY = new Vector3(0, 1, 0);
+  private readonly axisZ = new Vector3(0, 0, 1);
+
+  private readonly out: Frame = {
+    tesseract: { xw: 0, yw: 0, zw: 0, build: 0, opacity: 1, activeNode: -1, pulses: 0 },
+    position: new Vector3(),
+    scale: 1,
+    rotation: new Quaternion(),
+    travel: 0,
+    pointer: { x: 0, y: 0 },
+    visibility: 1,
   };
-  private readonly tmp = new Vector3();
-  private readonly anchorCenter = new Vector3();
 
   constructor(
     private readonly stage: Stage,
+    private readonly logoPose: Quaternion,
+    /** maps discipline index (clockwise from top) → node index */
+    private readonly nodeOrder: number[],
     private readonly events: ChoreographyEvents = {},
   ) {
-    this.heroTrack = document.querySelector("[data-scene-hero]");
-    this.heroAnchor = document.querySelector('[data-anchor="hero"]');
-    this.pillarsSection = document.querySelector("[data-scene-pillars]");
-    this.endMarker = document.querySelector("[data-scene-end]");
-    this.pillarAnchors = new Map(
-      PILLAR_ORDER.flatMap((id) => {
-        const el = document.querySelector<HTMLElement>(`[data-anchor-pillar="${id}"]`);
-        return el ? [[id, el] as const] : [];
-      }),
-    );
-
-    document.querySelectorAll<HTMLElement>("[data-pillar]").forEach((el) => {
-      const id = el.dataset.pillar as PillarId;
+    document.querySelectorAll<HTMLElement>("[data-discipline]").forEach((el) => {
+      const index = Number(el.dataset.discipline);
       const enter = () => {
-        this.hovered = id;
-        this.events.onPillarFocus?.(id);
+        this.hovered = index;
+        this.events.onDiscipline?.(index);
       };
       const leave = () => {
-        if (this.hovered === id) this.hovered = null;
+        if (this.hovered === index) this.hovered = -1;
       };
       el.addEventListener("pointerenter", enter);
       el.addEventListener("focusin", enter);
@@ -105,137 +103,112 @@ export class Choreographer {
     this.pointer.ty = (clientY / window.innerHeight) * 2 - 1;
   }
 
-  /** Raw scroll-derived progress values, before smoothing. */
-  private measure(): { assembly: number; pillars: number; visibility: number } {
+  private measure() {
     const vh = window.innerHeight;
-    let assembly = 0;
+    let enter = 0;
     if (this.heroTrack) {
       const r = this.heroTrack.getBoundingClientRect();
       const travel = r.height - vh;
       if (travel > vh * 0.3) {
-        // Pinned hero (desktop): assemble while scrolling through the track.
-        assembly = clamp01(-r.top / (travel * 0.85));
+        enter = clamp01(-r.top / travel);
       } else if (this.heroAnchor) {
-        // Unpinned hero (phones): assemble as the sculpture rises to the middle of the screen.
+        // Unpinned hero (phones): progress as the tesseract scrolls up past the middle.
         const a = this.heroAnchor.getBoundingClientRect();
-        const centre = a.top + a.height / 2;
-        assembly = clamp01((vh * 0.98 - centre) / (vh * 0.25));
+        enter = clamp01((vh * 0.5 - (a.top + a.height / 2)) / (vh * 0.6));
       }
     }
-    let pillars = 0;
-    if (this.pillarsSection) {
-      const r = this.pillarsSection.getBoundingClientRect();
-      pillars = clamp01((vh * 0.9 - r.top) / (vh * 0.5));
+    let disc = 0;
+    if (this.discSection) {
+      const r = this.discSection.getBoundingClientRect();
+      disc = clamp01((vh * 0.85 - r.top) / (vh * 0.5));
     }
     let visibility = 1;
-    if (this.endMarker) {
-      const r = this.endMarker.getBoundingClientRect();
-      visibility = clamp01(r.top / (vh * 0.35));
-    }
-    return { assembly, pillars, visibility };
+    if (this.endMarker) visibility = clamp01(this.endMarker.getBoundingClientRect().top / (vh * 0.35));
+    return { enter, disc, visibility };
   }
 
-  /** Whether the scene needs to keep rendering. */
   get visible(): boolean {
     return this.visibility > 0.001 || this.measure().visibility > 0.001;
   }
 
-  get canvasOpacity(): number {
-    return this.visibility;
+  private anchor(el: HTMLElement | null, out: Vector3): number {
+    if (!el) {
+      out.set(0, 0, 0);
+      return 4;
+    }
+    const r = el.getBoundingClientRect();
+    this.stage.toWorld(r.left + r.width / 2, r.top + r.height / 2, out);
+    return Math.min(r.width, r.height) * this.stage.unitsPerPixel;
   }
 
-  /** Computes this frame's targets. Call once per frame. */
-  frame(dt: number, time: number, first = false): SculptureTargets {
+  frame(dt: number, time: number, first = false): Frame {
+    if (this.startTime < 0) this.startTime = time;
     const raw = this.measure();
-    const rate = first ? Infinity : 6;
-    const k = 1 - Math.exp(-rate * dt);
-    this.assembly = first ? raw.assembly : lerp(this.assembly, raw.assembly, k);
-    this.pillarsBlend = first ? raw.pillars : lerp(this.pillarsBlend, raw.pillars, k);
-    this.visibility = first ? raw.visibility : lerp(this.visibility, raw.visibility, k);
+    const k = first ? 1 : 1 - Math.exp(-6 * dt);
+    this.enter = lerp(this.enter, raw.enter, k);
+    this.disc = lerp(this.disc, raw.disc, k);
+    this.visibility = lerp(this.visibility, raw.visibility, k);
 
-    // Touch devices have no hover pointer: give the light a slow sway instead.
-    const hasPointer = window.matchMedia("(hover: hover)").matches;
-    if (!hasPointer) {
-      this.pointer.tx = Math.sin(time * 0.35) * 0.5;
-      this.pointer.ty = Math.cos(time * 0.27) * 0.3;
+    if (!window.matchMedia("(hover: hover)").matches) {
+      // No hover pointer on touch screens: a slow sway stands in for it.
+      this.pointer.tx = Math.sin(time * 0.3) * 0.4;
+      this.pointer.ty = Math.cos(time * 0.23) * 0.25;
     }
-    const pk = 1 - Math.exp(-5 * dt);
+    const pk = 1 - Math.exp(-4 * dt);
     this.pointer.x = lerp(this.pointer.x, this.pointer.tx, pk);
     this.pointer.y = lerp(this.pointer.y, this.pointer.ty, pk);
     this.stage.setPointer(this.pointer.x, this.pointer.y);
 
-    // Assembly curve: drift slowly for the first 60% of the scroll, then snap.
-    const a = this.assembly;
-    const ea = a < 0.6 ? 0.35 * smooth(a / 0.6) : 0.35 + 0.65 * easeOutBack(clamp01((a - 0.6) / 0.4));
-    const eb = smooth(this.pillarsBlend);
-
-    if (a > 0.97 && this.armed) {
-      this.armed = false;
-      this.events.onAssembled?.();
-    } else if (a < 0.5) {
-      this.armed = true;
+    const build = clamp01((time - this.startTime) / BUILD_SECONDS);
+    if (build >= 1 && !this.built) {
+      this.built = true;
+      this.events.onBuilt?.();
     }
 
-    // Hero box → centre and size in scene units.
-    const upp = this.stage.unitsPerPixel;
-    let heroSize = 4;
-    if (this.heroAnchor) {
-      const r = this.heroAnchor.getBoundingClientRect();
-      this.stage.toWorld(r.left + r.width / 2, r.top + r.height / 2, this.anchorCenter);
-      heroSize = Math.min(r.width, r.height) * upp;
-    }
+    const e = smooth(this.enter);
+    const d = smooth(this.disc);
 
-    const spinAngle = time * 0.22;
-    const cos = Math.cos(spinAngle);
-    const sin = Math.sin(spinAngle);
-    const lean = (1 - ea) * heroSize * 0.03;
+    // Size and place: hero box, then the disciplines box.
+    const heroSize = this.anchor(this.heroAnchor, this.heroCentre);
+    const discSize = this.discAnchor ? this.anchor(this.discAnchor, this.discCentre) : heroSize;
+    if (!this.discAnchor) this.discCentre.copy(this.heroCentre);
 
-    this.targets.elements.forEach((t, i) => {
-      const id = PILLAR_ORDER[i];
-      const bob = Math.sin(time * 0.6 + i * 1.7) * heroSize * 0.015 * (1 - ea);
+    const heroScale = ((heroSize * 0.44) / HEX_RADIUS) * (1 + 1.4 * e * e);
+    const discScale = (discSize * 0.4) / HEX_RADIUS;
+    this.out.scale = lerp(heroScale, discScale, d);
+    this.out.position.lerpVectors(this.heroCentre, this.discCentre, d);
+    this.out.position.y += Math.sin(time * 0.5) * heroSize * 0.012 * (1 - d);
 
-      // Scattered
-      const s = SCATTER[i];
-      const sx = s[0] * heroSize + this.pointer.x * lean;
-      const sy = s[1] * heroSize - this.pointer.y * lean + bob;
-      const sz = s[2] * heroSize * 0.4;
+    // Orientation: logo pose, a slow continuous roll, gentle yaw sway, pointer tilt.
+    // In the disciplines section the roll settles to zero so nodes line up with their labels.
+    // Hold the exact logo pose while it builds, then ease into motion over 3 s.
+    const sway = smooth(clamp01((time - this.startTime - BUILD_SECONDS) / 3));
+    const free = sway * (1 - d);
+    const roll = ((time - this.startTime - BUILD_SECONDS) * 0.05) % (Math.PI * 2);
+    const settledRoll = Math.atan2(Math.sin(roll), Math.cos(roll)) * free;
+    const yaw = (Math.sin(time * 0.21) * 0.18 + this.pointer.x * 0.2) * free;
+    const tilt = this.pointer.y * 0.14 * free;
+    this.qRoll.setFromAxisAngle(this.axisZ, settledRoll);
+    this.qYaw.setFromAxisAngle(this.axisY, yaw);
+    this.qTilt.setFromAxisAngle(this.axisX, tilt);
+    this.out.rotation.copy(this.qTilt).multiply(this.qYaw).multiply(this.qRoll).multiply(this.logoPose);
 
-      // Assembled, slowly turning as one body
-      const p = ASSEMBLED[i];
-      const r = heroSize * 0.3;
-      const axv = (p[0] * cos + p[2] * sin) * r;
-      const azv = (-p[0] * sin + p[2] * cos) * r;
-      const ayv = p[1] * r;
+    // 4D: a slow breath makes the central cube expand and contract; scrolling into the
+    // hero turns the tesseract inside out (the inner cube becomes the outer one).
+    const breath = Math.sin(time * 0.45) * 0.12 * sway;
+    const t = this.out.tesseract;
+    t.xw = lerp(breath + e * (Math.PI / 2), 0, d);
+    t.yw = lerp(e * 0.55, 0, d);
+    t.zw = lerp(Math.sin(time * 0.31) * 0.05 * sway, 0, d);
+    t.build = build;
+    t.opacity = lerp(1 - 0.9 * smooth(clamp01((this.enter - 0.55) / 0.45)), 1, d);
+    t.activeNode = d > 0.5 && this.hovered >= 0 ? this.nodeOrder[this.hovered] : -1;
+    t.pulses = 1;
 
-      let x = this.anchorCenter.x + lerp(sx, axv, ea);
-      let y = this.anchorCenter.y + lerp(sy, ayv, ea);
-      let z = lerp(sz, azv, ea);
-      let scale = lerp(heroSize * 0.12, heroSize * 0.1, ea);
-
-      // Row, aligned to each pillar's anchor box
-      const anchor = this.pillarAnchors.get(id);
-      if (anchor && eb > 0) {
-        const ar = anchor.getBoundingClientRect();
-        this.stage.toWorld(ar.left + ar.width / 2, ar.top + ar.height / 2, this.tmp);
-        const rowScale = Math.min(ar.width, ar.height) * upp * 0.36;
-        x = lerp(x, this.tmp.x, eb);
-        y = lerp(y, this.tmp.y, eb);
-        z = lerp(z, 0, eb);
-        scale = lerp(scale, rowScale, eb);
-      }
-
-      t.position.set(x, y, z);
-      t.scale = scale;
-      const lit = this.hovered === null ? 1 : this.hovered === id ? 1 : 0;
-      t.highlight = lerp(1, lit, eb);
-      // The hovered pillar's solid grows slightly; the others shrink back.
-      if (this.hovered !== null) t.scale *= lerp(1, this.hovered === id ? 1.12 : 0.9, eb);
-    });
-
-    this.targets.network = clamp01((a - 0.55) / 0.4);
-    this.targets.networkOpacity = smooth(this.targets.network) * (1 - eb);
-    this.targets.nodeScale = heroSize * 0.045 * smooth(clamp01((a - 0.75) / 0.25)) * (1 - eb);
-    this.targets.spin = lerp(1, 0.35, ea) * (this.hovered ? 1.8 : 1);
-    return this.targets;
+    this.out.travel = e * (1 - d);
+    this.out.pointer.x = this.pointer.x;
+    this.out.pointer.y = this.pointer.y;
+    this.out.visibility = this.visibility;
+    return this.out;
   }
 }

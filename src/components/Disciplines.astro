@@ -1,0 +1,226 @@
+---
+import { useTranslations, type Locale, type UIKey } from "../i18n/ui";
+import { emblemSVG } from "../lib/emblem";
+
+interface Props {
+  locale: Locale;
+}
+const { locale } = Astro.props;
+const t = useTranslations(locale);
+
+/** Six disciplines, one per emblem node, clockwise from the top node. */
+const disciplines = [0, 1, 2, 3, 4, 5].map((i) => ({
+  i,
+  num: String(i + 1).padStart(2, "0"),
+  title: t(`disc.${i}.title` as UIKey),
+  body: t(`disc.${i}.body` as UIKey),
+  items: t(`disc.${i}.items` as UIKey).split("|"),
+  // Label position around the hexagon, as % of the emblem box.
+  x: 50 + Math.cos(((90 - 60 * i) * Math.PI) / 180) * 47,
+  y: 50 - Math.sin(((90 - 60 * i) * Math.PI) / 180) * 47,
+}));
+const fallback = emblemSVG({ id: "disc-emblem" });
+---
+
+<section class="disciplines" id="disciplines" data-scene-disciplines aria-labelledby="disc-title">
+  <div class="container grid">
+    <div class="copy">
+      <header class="head">
+        <p class="eyebrow">{t("disc.eyebrow")}</p>
+        <h2 id="disc-title">{t("disc.title")}</h2>
+        <p class="intro">{t("disc.intro")}</p>
+      </header>
+
+      <ol class="list">
+        {
+          disciplines.map((d) => (
+            <li class="item" data-discipline={d.i} tabindex="0">
+              <span class="num">{d.num}</span>
+              <div class="text">
+                <h3>{d.title}</h3>
+                <p class="body">{d.body}</p>
+                <ul class="tags">
+                  {d.items.map((item) => (
+                    <li>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            </li>
+          ))
+        }
+      </ol>
+    </div>
+
+    <div class="stage">
+      <div class="emblem-box" data-anchor="disciplines">
+        <div class="scene-fallback" set:html={fallback} />
+        {
+          disciplines.map((d) => (
+            <span class="node-label" data-node-label={d.i} style={`left:${d.x}%;top:${d.y}%`} aria-hidden="true">
+              {d.num}
+            </span>
+          ))
+        }
+      </div>
+    </div>
+  </div>
+</section>
+<div data-scene-end aria-hidden="true"></div>
+
+<script>
+  // Mirror the hovered discipline onto its node label (the 3D node is lit by the scene).
+  const items = document.querySelectorAll<HTMLElement>("[data-discipline]");
+  const labels = document.querySelectorAll<HTMLElement>("[data-node-label]");
+  const setActive = (index: string | null) =>
+    labels.forEach((l) => l.toggleAttribute("data-active", l.dataset.nodeLabel === index));
+  items.forEach((item) => {
+    const on = () => setActive(item.dataset.discipline ?? null);
+    const off = () => setActive(null);
+    item.addEventListener("pointerenter", on);
+    item.addEventListener("focusin", on);
+    item.addEventListener("pointerleave", off);
+    item.addEventListener("focusout", off);
+  });
+</script>
+
+<style>
+  .disciplines {
+    padding-block: var(--s-24) var(--s-32);
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: minmax(0, 6fr) minmax(0, 5fr);
+    gap: var(--s-16);
+    align-items: start;
+  }
+  .head {
+    display: grid;
+    gap: var(--s-4);
+    margin-bottom: var(--s-12);
+  }
+  h2 {
+    font-size: var(--step-3);
+    font-weight: 600;
+    color: var(--text-strong);
+    max-width: 16ch;
+  }
+  .intro {
+    color: var(--text-muted);
+    max-width: 46ch;
+  }
+  .list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid var(--line);
+  }
+  .item {
+    display: grid;
+    grid-template-columns: 3rem minmax(0, 1fr);
+    gap: var(--s-4);
+    padding: var(--s-6) var(--s-4) var(--s-6) 0;
+    border-bottom: 1px solid var(--line);
+    cursor: default;
+    transition: background-color var(--dur) var(--ease);
+    outline-offset: -2px;
+  }
+  .item:hover,
+  .item:focus-visible {
+    background: linear-gradient(90deg, var(--accent-soft), transparent 70%);
+  }
+  .num {
+    font-family: var(--font-display);
+    font-size: var(--step--1);
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    padding-top: 0.3em;
+    padding-left: var(--s-2);
+    font-variant-numeric: tabular-nums;
+    transition: color var(--dur-fast) var(--ease);
+  }
+  .item:hover .num,
+  .item:focus-visible .num {
+    color: var(--accent);
+  }
+  .text {
+    display: grid;
+    gap: var(--s-2);
+  }
+  h3 {
+    font-size: var(--step-1);
+    font-weight: 600;
+    color: var(--text-strong);
+  }
+  .body {
+    color: var(--text-muted);
+  }
+  .tags {
+    list-style: none;
+    margin: var(--s-2) 0 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-1) var(--s-4);
+    font-size: var(--step--1);
+    color: var(--text-muted);
+  }
+  .tags li + li::before {
+    content: "·";
+    margin-right: var(--s-4);
+    color: var(--line-strong);
+  }
+
+  .stage {
+    position: sticky;
+    top: calc(var(--header-h) + var(--s-8));
+  }
+  .emblem-box {
+    position: relative;
+    aspect-ratio: 1;
+    width: 100%;
+    max-width: 480px;
+    margin-inline: auto;
+  }
+  .scene-fallback {
+    position: absolute;
+    inset: 10%;
+  }
+  .scene-fallback :global(svg) {
+    width: 100%;
+    height: 100%;
+  }
+  .node-label {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    font-family: var(--font-display);
+    font-size: var(--step--1);
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+    transition: color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
+  }
+  .node-label[data-active] {
+    color: var(--accent);
+    transform: translate(-50%, -50%) scale(1.25);
+  }
+
+  @media (max-width: 959px) {
+    .grid {
+      grid-template-columns: 1fr;
+      gap: var(--s-8);
+    }
+    .stage {
+      position: relative;
+      top: 0;
+      order: -1;
+    }
+    .emblem-box {
+      max-width: 320px;
+    }
+    .head {
+      margin-bottom: var(--s-8);
+    }
+  }
+</style>

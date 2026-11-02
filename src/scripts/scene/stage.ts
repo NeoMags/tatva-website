@@ -61,12 +61,12 @@ export class Stage {
   }
 
   setPalette(p: ScenePalette): void {
-    this.hemi.color.copy(p.light);
+    this.hemi.color.set(0xffffff);
     this.hemi.groundColor.copy(p.ambient);
-    this.hemi.intensity = p.isLight ? 1.6 : 1.1;
-    this.key.color.copy(p.light);
-    this.key.intensity = p.isLight ? 1.4 : 2.4;
-    this.rim?.color.copy(p.edge);
+    this.hemi.intensity = p.isLight ? 1.5 : 1.0;
+    this.key.color.set(0xffffff);
+    this.key.intensity = p.isLight ? 1.3 : 2.2;
+    this.rim?.color.copy(p.accent);
   }
 
   /** Pointer in -1..1 moves the key light, so faces catch light as the cursor moves. */

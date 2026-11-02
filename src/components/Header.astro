@@ -11,6 +11,7 @@ const { locale, path } = Astro.props;
 const t = useTranslations(locale);
 const home = localizePath("/", locale);
 const links = [
+  { href: `${home}#disciplines`, label: t("nav.disciplines") },
   { href: `${home}#work`, label: t("nav.work") },
   { href: `${home}#process`, label: t("nav.process") },
   { href: `${home}#about`, label: t("nav.about") },
@@ -21,7 +22,7 @@ const links = [
 <header class="site-header" data-site-header>
   <div class="container bar">
     <a class="brand" href={home} aria-label="TATVA — home">
-      <Logo class="wordmark" />
+      <Logo variant="lockup" id="header-logo" />
     </a>
 
     <nav class="primary" aria-label="Primary">
@@ -117,7 +118,7 @@ const links = [
     border-bottom: 1px solid transparent;
   }
   .site-header[data-scrolled] {
-    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    background: color-mix(in srgb, var(--bg) 94%, transparent);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     border-bottom-color: var(--line);
@@ -133,9 +134,8 @@ const links = [
     display: inline-flex;
     padding: var(--s-2) 0;
   }
-  .brand :global(.wordmark) {
-    height: 18px;
-    width: 122px;
+  .brand :global(.logo) {
+    font-size: 20px;
   }
   .primary {
     margin-right: auto;

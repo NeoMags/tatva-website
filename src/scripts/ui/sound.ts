@@ -8,12 +8,8 @@
 const STORAGE_KEY = "tatva-sound";
 type ChimeKind = "assemble" | "pillar" | "tap" | "sent";
 
-const PILLAR_NOTES: Record<string, number> = {
-  consult: 1046.5, // C6
-  build: 1174.66, // D6
-  automate: 1318.51, // E6
-  scale: 1567.98, // G6
-};
+/** One note per discipline, a pentatonic run so any two sound good together. */
+const NODE_NOTES = [1046.5, 1174.66, 1318.51, 1567.98, 1760, 2093];
 
 // Bell-like partial ratios with their relative loudness and decay (seconds).
 const PARTIALS: ReadonlyArray<[ratio: number, gain: number, decay: number]> = [
@@ -101,7 +97,7 @@ export function chime(kind: ChimeKind, variant?: string): void {
       bell(1760, now + 0.18, 0.6);
       break;
     case "pillar":
-      bell(PILLAR_NOTES[variant ?? ""] ?? 1046.5, now, 0.55);
+      bell(NODE_NOTES[Number(variant)] ?? 1046.5, now, 0.55);
       break;
     case "sent":
       bell(1046.5, now, 0.7);
