@@ -28,7 +28,6 @@ import {
 } from "three";
 import {
   EDGES,
-  INNER,
   INNER_FACES,
   PLANES,
   SILHOUETTE,
@@ -53,7 +52,7 @@ export interface TesseractState {
   activeNode: number;
   /** 0..1 strength of the travelling pulses */
   pulses: number;
-  /** seconds, for the idle float and the orbit while a node is in focus */
+  /** seconds since start (kept for future effects; the structure itself stays rigid) */
   time: number;
 }
 
@@ -79,6 +78,9 @@ export class Tesseract {
   private readonly core: Mesh<BufferGeometry, MeshStandardMaterial>;
   private readonly planes: Mesh<BufferGeometry, MeshBasicMaterial>;
   private readonly pulses: Points<BufferGeometry, PointsMaterial>;
+  /** emerald overlay on the edges that meet the highlighted node */
+  private readonly highlight: LineSegments<BufferGeometry, LineBasicMaterial>;
+  private highlightNode = -1;
   private readonly pulseState = Array.from({ length: PULSE_COUNT }, (_, i) => ({
     edge: (i * 7) % EDGES.length,
     t: i / PULSE_COUNT,
@@ -90,14 +92,6 @@ export class Tesseract {
   private readonly accentColor = new Color();
   private readonly mixColor = new Color();
   private readonly nodeGlow = new Float32Array(SILHOUETTE.length);
-  /** 0..1 per node: how far it has travelled into the centre of the cube */
-  private readonly focus = new Float32Array(SILHOUETTE.length);
-  /** the logo's view axis in object space (the long diagonal); orbits turn about it */
-  private readonly axis = new Vector3(1, 1, 1).normalize();
-  private readonly orbit = new Quaternion();
-  /** slow orbit that accumulates only while a node is in focus */
-  private orbitPhase = 0;
-  private readonly tmpV = new Vector3();
   private readonly matrix = new Matrix4();
 
   constructor(lite: boolean) {
@@ -155,6 +149,15 @@ export class Tesseract {
     this.planes.frustumCulled = false;
     this.object.add(this.planes);
 
+    const highlightGeometry = new BufferGeometry();
+    highlightGeometry.setAttribute("position", new BufferAttribute(new Float32Array(4 * 6), 3));
+    this.highlight = new LineSegments(
+      highlightGeometry,
+      new LineBasicMaterial({ transparent: true, depthWrite: false, opacity: 0 }),
+    );
+    this.highlight.frustumCulled = false;
+    this.object.add(this.highlight);
+
     const pulseGeometry = new BufferGeometry();
     pulseGeometry.setAttribute("position", new BufferAttribute(new Float32Array(PULSE_COUNT * 3), 3));
     this.pulses = new Points(
@@ -205,6 +208,7 @@ export class Tesseract {
     this.core.material.emissive.copy(p.core).multiplyScalar(p.isLight ? 0.05 : 0.18);
     this.planes.material.color.copy(p.plane);
     this.pulses.material.color.copy(p.accent);
+    this.highlight.material.color.copy(p.accent);
     // Changing blending forces a shader rebuild; only do it when it actually changes.
     const blending = p.isLight ? NormalBlending : AdditiveBlending;
     for (const m of [this.planes.material, this.pulses.material]) {
@@ -228,37 +232,6 @@ export class Tesseract {
       rotate4(VERTICES[i], state.xw, state.yw, state.zw, this.tmp4);
       this.scaleOf[i] = project(this.tmp4, this.projected[i]);
     }
-
-    // 1b. Focus flow: the hovered node travels into the centre of the cube; the other
-    // five orbit about the view axis to close the gap, and the inner cube draws back to
-    // make room. Every edge is drawn from these positions, so the structure flows with them.
-    const kf = 1 - Math.exp(-4.5 * dt);
-    let total = 0;
-    for (let j = 0; j < SILHOUETTE.length; j++) {
-      this.focus[j] += ((state.activeNode === j ? 1 : 0) - this.focus[j]) * kf;
-      total += this.focus[j];
-    }
-    const t = state.time;
-    this.orbitPhase = total > 0.02 ? this.orbitPhase + dt * 0.12 * Math.min(1, total) : 0;
-    for (const vi of INNER) this.projected[vi].multiplyScalar(1 - 0.45 * smooth(Math.min(1, total)));
-    SILHOUETTE.forEach((vi, j) => {
-      const p = this.projected[vi];
-      const others = smooth(Math.min(1, total - this.focus[j]));
-      if (others > 0.001) {
-        // swing round by up to 30°, then keep drifting slowly while the focus lasts
-        this.orbit.setFromAxisAngle(this.axis, others * (Math.PI / 6 + this.orbitPhase));
-        p.applyQuaternion(this.orbit);
-        const along = p.dot(this.axis);
-        this.tmpV.copy(this.axis).multiplyScalar(along);
-        p.sub(this.tmpV).multiplyScalar(1 + 0.12 * others).add(this.tmpV);
-      }
-      // Idle float: each node breathes a little along the view axis and around it.
-      p.addScaledVector(this.axis, Math.sin(t * 0.9 + j * 1.1) * 0.06);
-      p.x += Math.sin(t * 0.7 + j * 2.3) * 0.025;
-      p.y += Math.cos(t * 0.6 + j * 1.7) * 0.025;
-      const f = smooth(this.focus[j]);
-      if (f > 0.001) p.lerp(this.tmpV.copy(this.axis).multiplyScalar(0.35), f);
-    });
 
     // 2. Build-up timings (fractions of state.build).
     const b = state.build;
@@ -293,12 +266,29 @@ export class Tesseract {
       const target = state.activeNode === i ? 1 : 0;
       this.nodeGlow[i] += (target - this.nodeGlow[i]) * (1 - Math.exp(-8 * dt));
       const g = this.nodeGlow[i];
-      const size = 0.085 * pop * (1 + 1.3 * g) * Math.sqrt(this.scaleOf[vi]);
+      const size = 0.085 * pop * (1 + 0.7 * g) * Math.sqrt(this.scaleOf[vi]);
       this.matrix.makeScale(size, size, size).setPosition(this.projected[vi]);
       this.nodes.setMatrixAt(i, this.matrix);
       this.nodes.setColorAt(i, this.mixColor.copy(this.nodeColor).lerp(this.accentColor, g));
     });
     this.nodes.instanceMatrix.needsUpdate = true;
+
+    // Emerald edges for the highlighted node (its 3 frame edges and its edge to the core),
+    // fading with the node's own glow so the switch between disciplines is smooth.
+    if (state.activeNode >= 0) this.highlightNode = state.activeNode;
+    const glow = this.highlightNode >= 0 ? this.nodeGlow[this.highlightNode] : 0;
+    if (glow > 0.01) {
+      const vi = SILHOUETTE[this.highlightNode];
+      const arr = (this.highlight.geometry.attributes.position as BufferAttribute).array as Float32Array;
+      EDGES.filter((e) => e.a === vi || e.b === vi).forEach((e, i) => {
+        const pa = this.projected[e.a];
+        const pb = this.projected[e.b];
+        arr.set([pa.x, pa.y, pa.z, pb.x, pb.y, pb.z], i * 6);
+      });
+      (this.highlight.geometry.attributes.position as BufferAttribute).needsUpdate = true;
+    }
+    this.highlight.material.opacity = glow * o;
+    this.highlight.visible = glow > 0.01 && o > 0.01;
     if (this.nodes.instanceColor) this.nodes.instanceColor.needsUpdate = true;
     this.nodes.material.opacity = o;
     this.nodes.material.transparent = o < 1;

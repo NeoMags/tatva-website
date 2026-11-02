@@ -53,10 +53,10 @@ export function mountScene(canvas: HTMLCanvasElement, tier: Exclude<SceneTier, "
       const dx = p.x - c.x;
       const dy = p.y - c.y;
       const len = Math.hypot(dx, dy) || 1;
-      // Outward from the centre; the active number rides just above its node as it moves to the centre.
-      const ux = active ? 0 : dx / len;
-      const uy = active ? -1 : dy / len;
-      const offset = active ? Math.min(46, box.width * 0.1) : Math.min(30, box.width * 0.07);
+      // Outward from the centre, a little further for the highlighted number.
+      const ux = dx / len;
+      const uy = dy / len;
+      const offset = Math.min(30, box.width * 0.07) + (active ? 16 : 0);
       label.style.setProperty("--x", `${(p.x + ux * offset - box.left).toFixed(1)}px`);
       label.style.setProperty("--y", `${(p.y + uy * offset - box.top).toFixed(1)}px`);
       // Nearer nodes read slightly larger and brighter: the numbers share the scene's depth.

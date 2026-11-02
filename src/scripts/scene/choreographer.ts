@@ -113,11 +113,12 @@ export class Choreographer {
       const angle = ((90 - 60 * this.hovered) * Math.PI) / 180;
       // Turn so the hovered node swings toward the viewer.
       // (rotation about Y brings a right-hand node forward when negative; about X, a top node when positive)
-      tx = -Math.cos(angle) * 0.07;
-      ty = Math.sin(angle) * 0.07;
+      tx = -Math.cos(angle) * 0.16;
+      ty = Math.sin(angle) * 0.16;
     }
-    const stiffness = 26;
-    const damping = 5.5;
+    // Critically damped-ish: a smooth tilt with only a hint of settle.
+    const stiffness = 20;
+    const damping = 7.5;
     const step = Math.min(dt, 1 / 30);
     this.lean.vx += ((tx - this.lean.x) * stiffness - this.lean.vx * damping) * step;
     this.lean.vy += ((ty - this.lean.y) * stiffness - this.lean.vy * damping) * step;
