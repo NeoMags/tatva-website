@@ -15,6 +15,8 @@ const steps = [1, 2, 3, 4, 5, 6, 7, 8].map((n) => ({
   glyph: emblemStageSVG(n),
 }));
 const finaleEmblem = emblemSVG({ id: "finale-emblem" });
+// Each sentence of the promise stays together on its own line where it fits.
+const finaleSentences = t("process.finale.line").split(/(?<=[.।])\s+/);
 ---
 
 <section class="process" id="process" aria-labelledby="process-title" data-process>
@@ -42,12 +44,20 @@ const finaleEmblem = emblemSVG({ id: "finale-emblem" });
 
     <!-- The outcome the eight steps lead to: the finished emblem, the name and the promise. -->
     <figure class="finale" data-finale aria-labelledby="finale-line">
-      <span class="finale-emblem" set:html={finaleEmblem} />
-      <figcaption class="finale-text">
-        <span class="finale-label">{t("process.finale.label")}</span>
+      <span class="finale-label">{t("process.finale.label")}</span>
+      <div class="finale-lockup">
+        <span class="finale-emblem" set:html={finaleEmblem} />
         <Logo variant="wordmark" class="finale-word" id="finale-logo" />
-        <span class="finale-tag" aria-label="Build, Connect, Expand"><span>Build</span><span>Connect</span><span>Expand</span></span>
-        <p id="finale-line" class="finale-line">{t("process.finale.line")}</p>
+        <span class="finale-tag" role="text" aria-label="Build, Connect, Expand">
+          <span class="w">Build</span><span class="dot" aria-hidden="true"></span><span class="w">Connect</span><span
+            class="dot"
+            aria-hidden="true"></span><span class="w">Expand</span>
+        </span>
+      </div>
+      <figcaption class="finale-text">
+        <p id="finale-line" class="finale-line">
+          {finaleSentences.map((line) => <span>{line} </span>)}
+        </p>
       </figcaption>
     </figure>
     </div>
@@ -217,16 +227,17 @@ const finaleEmblem = emblemSVG({ id: "finale-emblem" });
     color: var(--accent);
   }
 
-  /* Finale: the outcome every step leads to. */
+  /* Finale: the outcome every step leads to. A centred brand plate:
+     label, emblem, wordmark, tagline, then the promise below a hairline. */
   .finale {
     margin: var(--s-12) 0 0;
     padding: var(--s-12) var(--s-8);
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
+    justify-items: center;
     gap: var(--s-8);
-    align-items: center;
+    text-align: center;
     border: 1px solid var(--line);
-    background: linear-gradient(135deg, var(--accent-soft), transparent 65%);
+    background: radial-gradient(120% 90% at 50% 0%, var(--accent-soft), transparent 70%);
     /* the emblem in its emerald variant, following the theme's accent */
     --emblem-line: var(--accent);
     --emblem-node: var(--accent);
@@ -235,65 +246,93 @@ const finaleEmblem = emblemSVG({ id: "finale-emblem" });
     --emblem-core-top: color-mix(in srgb, var(--accent) 70%, transparent);
     --emblem-core-side: color-mix(in srgb, var(--accent) 42%, transparent);
     --emblem-core-front: color-mix(in srgb, var(--accent) 26%, transparent);
-  }
-  .finale-emblem {
-    width: clamp(96px, 12vw, 148px);
-    aspect-ratio: 1;
-    display: block;
-  }
-  .finale-emblem :global(svg) {
-    width: 100%;
-    height: 100%;
-    filter: drop-shadow(0 0 14px color-mix(in srgb, var(--accent) 45%, transparent));
-    animation: finale-turn 24s linear infinite;
-  }
-  @keyframes finale-turn {
-    to {
-      rotate: 360deg;
-    }
-  }
-  .finale-text {
-    display: grid;
-    gap: var(--s-3);
-    justify-items: start;
+    --track: 0.32em;
   }
   .finale-label {
     font-family: var(--font-display);
     font-size: var(--step--1);
-    letter-spacing: 0.18em;
+    letter-spacing: 0.2em;
+    /* cancel the trailing letter-space so the text is optically centred */
+    margin-right: -0.2em;
     text-transform: uppercase;
     color: var(--text-muted);
   }
-  .finale-text :global(.finale-word) {
-    color: var(--text-strong);
+  .finale-lockup {
+    display: grid;
+    justify-items: center;
+    gap: var(--s-4);
   }
-  .finale-text :global(.finale-word .logo-word) {
-    width: clamp(160px, 20vw, 240px);
-    height: auto;
+  .finale-emblem {
+    width: clamp(88px, 9vw, 120px);
+    aspect-ratio: 1;
     display: block;
+    margin-bottom: var(--s-2);
+  }
+  .finale-emblem :global(svg) {
+    display: block;
+    width: 100%;
+    height: 100%;
+    filter: drop-shadow(0 0 14px color-mix(in srgb, var(--accent) 45%, transparent));
+    animation: finale-float 6s ease-in-out infinite;
+  }
+  @keyframes finale-float {
+    0%,
+    100% {
+      translate: 0 0;
+    }
+    50% {
+      translate: 0 -4px;
+    }
+  }
+  .finale-lockup :global(.finale-word) {
+    display: block;
+    color: var(--text-strong);
+    line-height: 0;
+  }
+  .finale-lockup :global(.finale-word .logo-word) {
+    display: block;
+    width: clamp(200px, 22vw, 280px);
+    height: auto;
   }
   .finale-tag {
     display: flex;
-    flex-wrap: wrap;
-    gap: 0.4em 0.9em;
+    align-items: center;
+    justify-content: center;
+    gap: 1em;
     font-family: var(--font-display);
     font-size: var(--step--1);
-    letter-spacing: 0.32em;
-    text-transform: uppercase;
     color: var(--text);
+    white-space: nowrap;
   }
-  .finale-tag span + span::before {
-    content: "•";
-    color: var(--accent);
-    margin-right: 0.9em;
-    letter-spacing: 0;
+  .finale-tag .w {
+    letter-spacing: var(--track);
+    margin-right: calc(-1 * var(--track)); /* no trailing space: dots sit exactly between words */
+    text-transform: uppercase;
+  }
+  .finale-tag .dot {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--accent);
+    flex: none;
+  }
+  .finale-text {
+    width: 100%;
+    padding-top: var(--s-8);
+    border-top: 1px solid var(--line);
+    display: grid;
+    justify-items: center;
   }
   .finale-line {
-    margin: var(--s-2) 0 0;
+    margin: 0;
     font-size: var(--step-1);
-    line-height: 1.4;
+    line-height: 1.45;
     color: var(--text-strong);
-    max-width: 30ch;
+    max-width: 34ch;
+    text-wrap: balance;
+  }
+  .finale-line span {
+    display: inline-block;
   }
   .process[data-animate] .finale:not([data-seen]) {
     opacity: 0;
@@ -404,9 +443,12 @@ const finaleEmblem = emblemSVG({ id: "finale-emblem" });
       display: none;
     }
     .finale {
-      grid-template-columns: 1fr;
-      padding: var(--s-8) var(--s-6);
+      padding: var(--s-8) var(--s-4);
       gap: var(--s-6);
+    }
+    .finale-tag {
+      font-size: 0.7rem;
+      gap: 0.8em;
     }
 
   }
