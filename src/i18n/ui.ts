@@ -111,6 +111,11 @@ const en = {
   "process.6.body": "Real data, real users, edge cases and failure cases.",
   "process.7.title": "Deliver and evolve",
   "process.7.body": "Launch, training, support, and improvements as you grow.",
+  "process.8.title": "Create lasting impact",
+  "process.8.body":
+    "The solution becomes part of how the business runs: less manual work, clearer numbers, better decisions, and a foundation to grow on.",
+  "process.finale.label": "Where every step leads",
+  "process.finale.line": "We don't just build what you imagine. We help you discover what is possible.",
 
   "founder.eyebrow": "The founder",
   "founder.title": "A multidisciplinary approach to building things.",

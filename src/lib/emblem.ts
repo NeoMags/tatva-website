@@ -80,10 +80,11 @@ export function emblemSVG({ id, label }: EmblemOptions): string {
 }
 
 /**
- * The emblem at one of seven build stages, used as the glyph for each step of the
+ * The emblem at one of eight build stages, used as the glyph for each step of the
  * process: the structure assembles as the process advances.
  *   1 the idea (a single point) · 2 six nodes · 3 the outer frame · 4 connecting edges
  *   5 the inner cube outline · 6 the dimensional planes · 7 the complete emblem
+ *   8 the complete emblem, lit (marked with class "g-final" for the emerald variant)
  */
 export function emblemStageSVG(stage: number): string {
   const outer = hexagon(EMBLEM.R);
@@ -113,5 +114,6 @@ export function emblemStageSVG(stage: number): string {
   if (stage >= 2)
     parts.push(outer.map(([x, y], i) => `<circle cx="${x}" cy="${y}" r="9" class="g-node" style="--i:${i}"/>`).join(""));
   if (stage === 1) parts.push(`<circle cx="0" cy="0" r="12" class="g-node g-seed"/>`);
-  return `<svg viewBox="-115 -115 230 230" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">${parts.join("")}</svg>`;
+  const cls = stage >= 8 ? ` class="g-final"` : "";
+  return `<svg${cls} viewBox="-115 -115 230 230" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">${parts.join("")}</svg>`;
 }
