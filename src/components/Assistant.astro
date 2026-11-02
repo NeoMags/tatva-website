@@ -9,6 +9,8 @@ import { assistantStrings } from "../i18n/assistant";
 import { useTranslations, type Locale, type UIKey } from "../i18n/ui";
 import { emblemSVG } from "../lib/emblem";
 import { site } from "../data/site";
+import { getImage } from "astro:assets";
+import headshot from "../assets/founder/headshot.jpg";
 
 interface Props {
   locale: Locale;
@@ -16,7 +18,9 @@ interface Props {
 const { locale } = Astro.props;
 const s = assistantStrings(locale);
 const t = useTranslations(locale);
+const avatar = await getImage({ src: headshot, width: 96, height: 96, format: "webp" });
 const data = {
+  avatar: avatar.src,
   s,
   phone: site.phone,
   whatsapp: `https://wa.me/${site.phone.e164.replace("+", "")}`,
@@ -33,7 +37,7 @@ const emblemSmall = emblemSVG({ id: "assist-emblem-sm" });
   <button class="launcher" type="button" aria-label={s.open} aria-expanded="false" aria-controls="assistant-panel" data-assist-open>
     <span class="launcher-emblem" set:html={emblem} />
     <span class="ring" aria-hidden="true"></span>
-    <span class="bubble" aria-hidden="true">{s.bubble}</span>
+    <span class="bubble" aria-hidden="true" data-assist-bubble><strong>{s.bubble}</strong> <span class="hint">{s.launcherHint}</span></span>
   </button>
 
   <section class="panel" id="assistant-panel" role="dialog" aria-labelledby="assistant-title" aria-modal="false" hidden data-assist-panel>
@@ -150,6 +154,38 @@ const emblemSmall = emblemSVG({ id: "assist-emblem-sm" });
   }
   .assistant[data-open] .launcher {
     display: none;
+  }
+  .launcher {
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+  }
+  .bubble .hint {
+    font-weight: 400;
+    opacity: 0.75;
+  }
+  /* Holding to speak: the launcher swells, turns emerald and pulses; the bubble shows a timer. */
+  .assistant[data-holding] .launcher {
+    transform: scale(1.18);
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  .assistant[data-holding] .launcher-emblem {
+    --emblem-line: var(--on-accent);
+    --emblem-node: var(--on-accent);
+    animation-duration: 4s;
+  }
+  .assistant[data-holding] .ring {
+    animation-duration: 1s;
+  }
+  .assistant[data-holding] .bubble {
+    animation: none;
+    opacity: 1;
+    transform: translate(0, -50%);
+    background: var(--accent);
+    color: var(--on-accent);
+    font-variant-numeric: tabular-nums;
   }
   @keyframes spin {
     to {
@@ -326,6 +362,31 @@ const emblemSmall = emblemSVG({ id: "assist-emblem-sm" });
   }
   .log :global(.msg a) {
     color: inherit;
+  }
+  .log :global(.msg audio) {
+    width: 100%;
+    height: 40px;
+  }
+  .log :global(.from-nesar) {
+    display: flex;
+    gap: var(--s-3);
+    align-items: flex-start;
+  }
+  .log :global(.from-nesar img) {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex: none;
+    box-shadow: 0 0 0 2px var(--accent);
+  }
+  .log :global(.from-nesar .who) {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+    margin-bottom: 2px;
   }
   @keyframes msg {
     from { opacity: 0; transform: translateY(6px); }
@@ -505,6 +566,19 @@ const emblemSmall = emblemSVG({ id: "assist-emblem-sm" });
     cursor: pointer;
     justify-self: start;
   }
+  .actions :global(.card.busy) {
+    grid-auto-flow: column;
+    justify-content: start;
+    align-items: center;
+  }
+  .actions :global(.spinner) {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid var(--line-strong);
+    border-top-color: var(--accent);
+    animation: spin 800ms linear infinite;
+  }
   @keyframes rec {
     50% { box-shadow: 0 0 0 8px var(--accent-soft); }
   }
@@ -558,6 +632,16 @@ const emblemSmall = emblemSVG({ id: "assist-emblem-sm" });
     }
     .bubble {
       display: none;
+    }
+    .assistant[data-holding] .bubble {
+      display: block;
+      right: auto;
+      left: auto;
+      top: auto;
+      bottom: calc(100% + 14px);
+      transform: none;
+      position: absolute;
+      inset-inline-end: 0;
     }
   }
   @media (prefers-reduced-motion: reduce) {

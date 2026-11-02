@@ -11,6 +11,8 @@
 
 export interface Env {
   DB?: D1Database;
+  /** Workers AI binding, used for speech-to-text */
+  AI?: Ai;
   TELEGRAM_BOT_TOKEN?: string;
   TELEGRAM_CHAT_ID?: string;
   TURNSTILE_SECRET?: string;
@@ -40,7 +42,7 @@ export async function ipHash(request: Request, salt = "tatva"): Promise<string> 
 /** True when this IP has already sent `limit` rows in the last `minutes`. */
 export async function rateLimited(
   db: D1Database | undefined,
-  table: "enquiries" | "assist_requests",
+  table: "enquiries" | "assist_requests" | "transcriptions",
   hash: string,
   limit = 5,
   minutes = 10,

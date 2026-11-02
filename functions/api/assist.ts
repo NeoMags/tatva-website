@@ -25,14 +25,16 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     return typeof v === "string" ? v : undefined;
   };
 
-  const kind = field("kind") === "help" ? "help" : field("kind") === "question" ? "question" : null;
+  const kindField = field("kind");
+  const kind = kindField === "help" || kindField === "question" || kindField === "voice" ? kindField : null;
   const requestId = field("requestId") ?? "";
   if (!kind || !/^[0-9a-f-]{36}$/i.test(requestId)) return json({ error: "invalid" }, 422);
 
   const req = parseHelpRequest(Object.fromEntries([...form.entries()].filter(([, v]) => typeof v === "string")));
   if (req.website) return json({ ok: true }); // honeypot
-  if (!req.name || !validPhone(req.phone)) return json({ error: "invalid" }, 422);
-  if (kind === "help" && !req.consent) return json({ error: "consent_required" }, 422);
+  // Voice notes may leave the name out; help requests and questions need one.
+  if ((kind !== "voice" && !req.name) || !validPhone(req.phone)) return json({ error: "invalid" }, 422);
+  if ((kind === "help" || kind === "voice") && !req.consent) return json({ error: "consent_required" }, 422);
 
   const audioEntry = form.get("audio");
   const audio = audioEntry instanceof File && audioEntry.size > 0 ? audioEntry : null;
@@ -47,8 +49,9 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     // INSERT OR IGNORE + unique request_id: a retried submission is not recorded or alerted twice.
     const row = await env.DB.prepare(
       `INSERT OR IGNORE INTO assist_requests
-         (request_id, kind, name, phone, area, details, requester, has_audio, consent, locale, ip_hash)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
+         (request_id, kind, name, phone, area, details, note, language, location_lat, location_lng,
+          requester, has_audio, consent, locale, ip_hash)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
     )
       .bind(
         requestId,
@@ -57,6 +60,10 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
         req.phone,
         req.area ?? null,
         req.details ?? null,
+        req.note ?? null,
+        req.language ?? null,
+        req.lat ?? null,
+        req.lng ?? null,
         req.for ?? null,
         audio ? 1 : 0,
         req.consent ? 1 : 0,
@@ -76,15 +83,26 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     }
   }
 
-  const heading = kind === "help" ? "🆘 <b>TATVA Care request</b>" : "<b>Question from the assistant</b>";
+  const heading =
+    kind === "help"
+      ? "🆘 <b>TATVA Care request</b>"
+      : kind === "voice"
+        ? "🎙 <b>Voice note</b>"
+        : "<b>Question from the assistant</b>";
+  const transcribed = field("transcribed") === "true";
+  const map = req.lat !== undefined && req.lng !== undefined ? `https://maps.google.com/?q=${req.lat},${req.lng}` : "";
   const lines = [
     `${heading}${id ? ` #${id}` : ""}`,
-    `<b>${esc(req.name)}</b> · <a href="tel:${esc(req.phone)}">${esc(req.phone)}</a>`,
+    `<b>${esc(req.name || "Name not given")}</b> · <a href="tel:${esc(req.phone)}">${esc(req.phone)}</a>`,
     req.for ? `For: ${req.for === "family" ? "a family member" : "themselves"}` : "",
-    req.area ? `Area: ${esc(req.area)}` : "",
-    req.details ? `\n${esc(req.details)}` : "",
+    req.area ? `Location: ${esc(req.area)}` : "",
+    map ? `<a href="${map}">Open their location in Maps</a>` : "",
+    req.details
+      ? `\n${kind === "voice" && transcribed ? `<i>Transcript${req.language ? ` (${esc(req.language)})` : ""}, checked by the sender:</i>\n` : ""}${esc(req.details)}`
+      : "",
+    req.note ? `\n<b>Also important:</b> ${esc(req.note)}` : "",
     audio ? "\n🎙 Voice message attached" : "",
-    kind === "help" ? "Consent given in the assistant." : "",
+    kind === "help" || kind === "voice" ? "Consent given in the assistant." : "",
   ].filter(Boolean);
   const caption = lines.join("\n");
 
@@ -92,6 +110,6 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   if (notified && env.DB && id) await env.DB.prepare("UPDATE assist_requests SET notified = 1 WHERE id = ?").bind(id).run();
 
   // A help request that reached nobody must not look successful to the person asking.
-  if (!notified && (kind === "help" || !env.DB)) return json({ error: "not_delivered" }, 502);
+  if (!notified && (kind !== "question" || !env.DB)) return json({ error: "not_delivered" }, 502);
   return json({ ok: true });
 };

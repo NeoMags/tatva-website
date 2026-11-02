@@ -8,3 +8,7 @@ binding = "DB"
 database_name = "tatva"
 database_id = "REPLACE_AFTER_CREATING_THE_DATABASE"
 migrations_dir = "migrations"
+
+# Workers AI (speech-to-text for voice notes). Free daily allowance: 10,000 neurons.
+[ai]
+binding = "AI"

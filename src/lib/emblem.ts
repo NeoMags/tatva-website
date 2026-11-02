@@ -108,8 +108,10 @@ export function emblemStageSVG(stage: number): string {
   if (stage >= 3) lines.push(poly(outer));
   if (stage >= 4) lines.push(...outer.map((p, i) => line(p, inner[i])));
   if (stage >= 5) lines.push(poly(inner), line(c, inner[1]), line(c, inner[5]), line(c, inner[3]));
-  if (lines.length) parts.push(`<path d="${lines.join("")}" class="g-line"/>`);
-  if (stage >= 2) parts.push(outer.map(([x, y]) => `<circle cx="${x}" cy="${y}" r="9" class="g-node"/>`).join(""));
+  // Each line is its own path with pathLength=1 so CSS can draw it in.
+  lines.forEach((d, i) => parts.push(`<path d="${d}" class="g-line" pathLength="1" style="--i:${i}"/>`));
+  if (stage >= 2)
+    parts.push(outer.map(([x, y], i) => `<circle cx="${x}" cy="${y}" r="9" class="g-node" style="--i:${i}"/>`).join(""));
   if (stage === 1) parts.push(`<circle cx="0" cy="0" r="12" class="g-node g-seed"/>`);
   return `<svg viewBox="-115 -115 230 230" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">${parts.join("")}</svg>`;
 }

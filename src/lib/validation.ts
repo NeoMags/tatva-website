@@ -64,17 +64,32 @@ export interface HelpRequest {
   /** "self" or "family" — who is asking */
   for?: string;
   website?: string;
+  /** voice notes: anything else important */
+  note?: string;
+  /** voice notes: language reported by the transcriber */
+  language?: string;
+  lat?: number;
+  lng?: number;
 }
+
+const coord = (v: unknown, limit: number): number | undefined => {
+  const n = typeof v === "string" && v.trim() !== "" ? Number(v) : NaN;
+  return Number.isFinite(n) && Math.abs(n) <= limit ? Math.round(n * 1e5) / 1e5 : undefined;
+};
 
 export function parseHelpRequest(input: Record<string, unknown>): HelpRequest {
   return {
     name: clean(input.name, 120),
     phone: clean(input.phone, 30).replace(/[^\d+]/g, ""),
     area: clean(input.area, 160) || undefined,
-    details: clean(input.details, 2000) || undefined,
+    details: clean(input.details, 4000) || undefined,
     consent: input.consent === true || input.consent === "true",
     for: clean(input.for, 20) || undefined,
     website: clean(input.website, 200) || undefined,
+    note: clean(input.note, 1000) || undefined,
+    language: clean(input.language, 20) || undefined,
+    lat: coord(input.lat, 90),
+    lng: coord(input.lng, 180),
   };
 }
 

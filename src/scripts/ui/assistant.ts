@@ -14,7 +14,30 @@ interface Data {
   phone: { display: string; e164: string };
   whatsapp: string;
   disciplines: { title: string; body: string }[];
+  /** small optimised headshot of Nesar, shown beside personal messages */
+  avatar: string;
 }
+
+/** Display names for languages the transcriber may report. */
+const LANGUAGE_NAMES: Record<string, string> = {
+  en: "English",
+  english: "English",
+  kn: "ಕನ್ನಡ (Kannada)",
+  kannada: "ಕನ್ನಡ (Kannada)",
+  hi: "हिन्दी (Hindi)",
+  hindi: "हिन्दी (Hindi)",
+  mr: "मराठी (Marathi)",
+  marathi: "मराठी (Marathi)",
+  te: "తెలుగు (Telugu)",
+  telugu: "తెలుగు (Telugu)",
+  ta: "தமிழ் (Tamil)",
+  tamil: "தமிழ் (Tamil)",
+  ur: "اردو (Urdu)",
+  urdu: "اردو (Urdu)",
+};
+
+/** A press longer than this on the launcher records a voice note instead of opening the chat. */
+const HOLD_MS = 450;
 
 const MAX_RECORDING_SECONDS = 120;
 
@@ -49,13 +72,14 @@ export function initAssistant(): void {
   let recorder: Recorder | null = null;
 
   // ---------- open / close ----------
-  const open = () => {
+  /** @param voice true when opened from a hold-to-speak recording: skip the greeting menu */
+  const open = (voice = false) => {
     panel.hidden = false;
     root.setAttribute("data-open", "");
     openBtn.setAttribute("aria-expanded", "true");
     if (!started) {
       started = true;
-      start();
+      if (!voice) start();
     }
     (actions.querySelector<HTMLElement>("button, a") ?? input).focus();
     chime("tap");
@@ -67,7 +91,77 @@ export function initAssistant(): void {
     openBtn.setAttribute("aria-expanded", "false");
     openBtn.focus();
   };
-  openBtn.addEventListener("click", open);
+  // ---------- launcher: tap to chat, hold to speak ----------
+  const bubble = root.querySelector<HTMLElement>("[data-assist-bubble]");
+  const bubbleDefault = bubble?.innerHTML ?? "";
+  let pressing = false;
+  let longPress = false;
+  let holdTimer = 0;
+  let holdRec: Recorder | null = null;
+  let holdSeconds = 0;
+
+  const endHoldUI = () => {
+    root.removeAttribute("data-holding");
+    if (bubble) bubble.innerHTML = bubbleDefault;
+  };
+
+  const startHold = async () => {
+    longPress = true;
+    navigator.vibrate?.(25);
+    root.setAttribute("data-holding", "");
+    if (bubble) bubble.textContent = s.holdListening;
+    holdSeconds = 0;
+    try {
+      holdRec = await Recorder.start({
+        onTick: (sec) => {
+          holdSeconds = sec;
+          if (bubble && root.hasAttribute("data-holding")) bubble.textContent = `${s.holdListening} ${fmt(sec)}`;
+        },
+        onDone: (blob) => {
+          endHoldUI();
+          open(true);
+          voiceReview(blob, holdSeconds);
+        },
+      });
+      // Released while the browser was asking for microphone permission:
+      // keep recording and give a stop button in the panel instead.
+      if (!pressing) {
+        endHoldUI();
+        open(true);
+        recordingCard(holdRec);
+      }
+    } catch {
+      endHoldUI();
+      open(true);
+      bot(s.recordDenied);
+      voiceDetails(null, 0, "");
+    }
+  };
+
+  openBtn.addEventListener("pointerdown", (e) => {
+    if (e.button !== 0) return;
+    pressing = true;
+    longPress = false;
+    openBtn.setPointerCapture?.(e.pointerId);
+    holdTimer = window.setTimeout(() => void startHold(), HOLD_MS);
+  });
+  const release = () => {
+    if (!pressing) return;
+    pressing = false;
+    clearTimeout(holdTimer);
+    if (!longPress) {
+      open();
+      return;
+    }
+    if (holdRec?.active) holdRec.stop();
+  };
+  openBtn.addEventListener("pointerup", release);
+  openBtn.addEventListener("pointercancel", release);
+  // Keyboard (Enter/Space) produces a click with no pointer press: open the chat.
+  openBtn.addEventListener("click", (e) => {
+    if (e.detail === 0) open();
+  });
+  openBtn.addEventListener("contextmenu", (e) => e.preventDefault());
   closeBtn.addEventListener("click", close);
   panel.addEventListener("keydown", (e) => {
     if (e.key === "Escape") close();
@@ -111,6 +205,17 @@ export function initAssistant(): void {
   const linkChip = (label: string, href: string, cls = "chip") =>
     el("a", { class: cls, href, ...(href.startsWith("http") ? { target: "_blank", rel: "noopener" } : {}) }, label);
   const backChip = () => chip(s.back, start);
+  /** A message from Nesar personally, with his photo. */
+  const fromNesar = (text: string) =>
+    bot(
+      el(
+        "span",
+        { class: "from-nesar" },
+        el("img", { src: data.avatar, alt: "", width: "36", height: "36" }),
+        el("span", {}, el("span", { class: "who" }, s.nesarCaption), el("span", {}, text)),
+      ),
+    );
+  const fmt = (sec: number) => `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, "0")}`;
   const callTatva = (cls = "chip") => linkChip(`${s.careCall} · ${data.phone.display}`, `tel:${data.phone.e164}`, cls);
 
   // ---------- main menu ----------
@@ -119,6 +224,7 @@ export function initAssistant(): void {
     bot(s.greeting);
     setActions(
       chip(s.optCare, careIntro, "chip care"),
+      chip(s.optVoice, voiceRecord, "chip care"),
       chip(s.optServices, services),
       chip(s.optProducts, products),
       chip(s.optPricing, pricing),
@@ -190,7 +296,7 @@ export function initAssistant(): void {
 
   // ---------- TATVA Care ----------
   function careIntro() {
-    bot(s.careIntro);
+    fromNesar(s.careIntro);
     note(s.careNotEmergency);
     bot(s.careHours);
     setActions(chip(s.careStart, careConsent, "chip primary"), callTatva(), backChip());
@@ -375,7 +481,7 @@ export function initAssistant(): void {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       chime("sent");
       if (draft.kind === "help") {
-        bot(s.sentHelp.replace("{phone}", req.phone));
+        fromNesar(s.sentHelp.replace("{phone}", req.phone));
         note(s.sentHelpWarn);
       } else {
         bot(s.sentQuestion);
@@ -390,6 +496,193 @@ export function initAssistant(): void {
       }
       setActions(...Array.from(actions.childNodes), callTatva("chip primary"));
     }
+  }
+
+  // ---------- voice notes ----------
+
+  /** In-panel recorder for people who can't or don't hold the launcher. */
+  function voiceRecord() {
+    bot(s.voiceIntro);
+    if (!canRecord()) {
+      bot(s.recordDenied);
+      voiceDetails(null, 0, "");
+      return;
+    }
+    const label = el("span", {}, s.recordStart);
+    const time = el("span", { class: "time" }, "0:00");
+    const mic = el("button", { type: "button", class: "mic" }, label, time);
+    let seconds = 0;
+    mic.addEventListener("click", async () => {
+      if (recorder?.active) {
+        recorder.stop();
+        return;
+      }
+      try {
+        recorder = await Recorder.start({
+          onTick: (sec) => {
+            seconds = sec;
+            time.textContent = `${fmt(sec)} / ${fmt(MAX_RECORDING_SECONDS)}`;
+          },
+          onDone: (blob) => voiceReview(blob, seconds),
+        });
+        mic.setAttribute("data-recording", "");
+        label.textContent = s.recordStop;
+      } catch {
+        bot(s.recordDenied);
+        voiceDetails(null, 0, "");
+      }
+    });
+    setActions(el("div", { class: "card" }, mic), backChip());
+  }
+
+  /** Shown when a hold-to-speak recording continues after the finger has lifted. */
+  function recordingCard(rec: Recorder) {
+    const stop = el("button", { type: "button", class: "mic", "data-recording": "" }, s.voiceRecording);
+    stop.addEventListener("click", () => rec.stop());
+    setActions(el("div", { class: "card" }, stop));
+  }
+
+  /** Plays back the note, sends it to be written down, then asks for the details. */
+  async function voiceReview(audio: Blob, seconds: number) {
+    if (seconds < 1 || audio.size < 1500) {
+      bot(s.voiceTooShort);
+      setActions(chip(s.optVoice, voiceRecord, "chip primary"), backChip());
+      return;
+    }
+    const player = el("audio", { controls: "", src: URL.createObjectURL(audio) });
+    bot(s.voiceGot.replace("{time}", fmt(seconds)));
+    note(player);
+    setActions(el("div", { class: "card busy" }, el("span", { class: "spinner", "aria-hidden": "true" }), el("span", {}, "…")));
+    const result = await transcribe(audio);
+    voiceDetails(audio, seconds, result.text, result.language);
+  }
+
+  async function transcribe(audio: Blob): Promise<{ text: string; language?: string }> {
+    try {
+      const body = new FormData();
+      body.set("audio", audio, `note.${audio.type.includes("mp4") ? "m4a" : "webm"}`);
+      const res = await fetch("/api/transcribe", { method: "POST", body });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const out = (await res.json()) as { text?: string; language?: string };
+      return { text: (out.text ?? "").trim(), language: out.language };
+    } catch {
+      return { text: "" };
+    }
+  }
+
+  /** One card: the (editable) transcript, location, mobile, name, anything else, consent. */
+  function voiceDetails(audio: Blob | null, seconds: number, transcript: string, language?: string) {
+    const card = el("div", { class: "card" });
+    const text = el("textarea", { id: "voice-text", maxlength: "4000" });
+    text.value = transcript;
+    if (transcript) {
+      card.append(el("label", { for: "voice-text" }, s.voiceHeard, text));
+      const name = language ? LANGUAGE_NAMES[language.toLowerCase()] ?? language : "";
+      if (name) card.append(el("p", { class: "small" }, s.voiceDetected.replace("{lang}", name)));
+    } else {
+      if (audio) bot(s.voiceNoText);
+      card.append(el("label", { for: "voice-text" }, s.detailsLabel, text));
+    }
+
+    card.append(el("h3", {}, s.detailsTitle));
+    const location = el("input", { type: "text", id: "voice-location", autocomplete: "street-address", maxlength: "200" });
+    const locate = el("button", { type: "button", class: "linkbtn" }, s.useLocation);
+    const locStatus = el("p", { class: "small", role: "status" });
+    let coords: { lat: number; lng: number } | null = null;
+    locate.addEventListener("click", () => {
+      if (!navigator.geolocation) {
+        locStatus.textContent = s.locationFailed;
+        return;
+      }
+      locStatus.textContent = s.locating;
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          coords = { lat: +pos.coords.latitude.toFixed(5), lng: +pos.coords.longitude.toFixed(5) };
+          locStatus.textContent = `✓ ${s.locationAdded} (${coords.lat}, ${coords.lng})`;
+        },
+        () => (locStatus.textContent = s.locationFailed),
+        { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 },
+      );
+    });
+    const mobile = el("input", { type: "tel", id: "voice-mobile", autocomplete: "tel", inputmode: "tel", maxlength: "16" });
+    const name = el("input", { type: "text", id: "voice-name", autocomplete: "name", maxlength: "120" });
+    const important = el("textarea", { id: "voice-important", maxlength: "1000" });
+    const consent = el("input", { type: "checkbox", id: "voice-consent" });
+    const err = el("p", { class: "err", role: "alert" });
+    const send = el("button", { type: "button", class: "big primary" }, s.sendVoice);
+
+    card.append(
+      el("label", { for: "voice-location" }, s.locationLabel, location),
+      locate,
+      locStatus,
+      el("label", { for: "voice-mobile" }, s.mobileLabel, mobile),
+      el("label", { for: "voice-name" }, s.nameOptional, name),
+      el("label", { for: "voice-important" }, s.importantLabel, important),
+      el("label", { class: "tick", for: "voice-consent" }, consent, el("span", {}, s.consentVoice)),
+      err,
+      send,
+      el("p", { class: "small" }, s.privacy),
+    );
+
+    let requestId: string | undefined;
+    send.addEventListener("click", async () => {
+      const phone = mobile.value.replace(/[\s-]/g, "");
+      if (!validPhone(phone)) {
+        err.textContent = s.phoneInvalid;
+        mobile.focus();
+        return;
+      }
+      if (!audio && !text.value.trim()) {
+        err.textContent = s.needSomething;
+        text.focus();
+        return;
+      }
+      if (!consent.checked) {
+        err.textContent = s.consentNeeded;
+        consent.focus();
+        return;
+      }
+      err.textContent = "";
+      requestId ??= crypto.randomUUID();
+      const body = new FormData();
+      body.set("kind", "voice");
+      body.set("requestId", requestId);
+      body.set("locale", document.documentElement.lang);
+      body.set("name", name.value.trim());
+      body.set("phone", phone);
+      body.set("area", location.value.trim());
+      body.set("details", text.value.trim());
+      body.set("note", important.value.trim());
+      body.set("language", language ?? "");
+      body.set("transcribed", transcript ? "true" : "false");
+      body.set("consent", "true");
+      if (coords) {
+        body.set("lat", String(coords.lat));
+        body.set("lng", String(coords.lng));
+      }
+      if (audio) body.set("audio", audio, `note.${audio.type.includes("mp4") ? "m4a" : "webm"}`);
+      send.disabled = true;
+      send.textContent = s.sending;
+      try {
+        const res = await fetch("/api/assist", { method: "POST", body });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        chime("sent");
+        fromNesar(s.sentVoice.replace("{phone}", phone));
+        setActions(callTatva(), backChip());
+      } catch {
+        err.textContent = s.sendError;
+        send.disabled = false;
+        send.textContent = s.sendVoice;
+        if (!card.parentElement?.querySelector(".call-fallback")) {
+          const call = callTatva("chip primary");
+          call.classList.add("call-fallback");
+          actions.append(call);
+        }
+      }
+    });
+    void seconds;
+    setActions(card, callTatva(), backChip());
+    (transcript ? mobile : text).focus();
   }
 }
 

@@ -15,7 +15,7 @@ const steps = [1, 2, 3, 4, 5, 6, 7].map((n) => ({
 }));
 ---
 
-<section class="process" id="process" aria-labelledby="process-title">
+<section class="process" id="process" aria-labelledby="process-title" data-process>
   <div class="container grid">
     <header class="head">
       <p class="eyebrow">{t("process.eyebrow")}</p>
@@ -25,7 +25,7 @@ const steps = [1, 2, 3, 4, 5, 6, 7].map((n) => ({
     <ol class="steps" data-steps>
       {
         steps.map((s) => (
-          <li class="step" data-step>
+          <li class="step" data-step style={`--n:${s.n}`}>
             <span class="glyph" set:html={s.glyph} />
             <span class="num">{String(s.n).padStart(2, "0")}</span>
             <div class="text">
@@ -40,15 +40,42 @@ const steps = [1, 2, 3, 4, 5, 6, 7].map((n) => ({
 </section>
 
 <script>
-  // Each step lights up as it reaches the middle of the screen. Steps are fully
-  // visible without this; it only adds emphasis.
+  // Progressive enhancement: everything is visible without this script.
+  // With it, each glyph draws itself in when its step scrolls into view, the step at
+  // the centre of the screen is highlighted, and an emerald line grows down the steps.
+  const section = document.querySelector<HTMLElement>("[data-process]");
+  const list = document.querySelector<HTMLElement>("[data-steps]");
   const steps = document.querySelectorAll<HTMLElement>("[data-step]");
-  if ("IntersectionObserver" in window && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-    const io = new IntersectionObserver(
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (section && list && "IntersectionObserver" in window && !reduce) {
+    section.setAttribute("data-animate", "");
+    const seen = new IntersectionObserver(
+      (entries) =>
+        entries.forEach((e) => {
+          if (e.isIntersecting) {
+            e.target.setAttribute("data-seen", "");
+            seen.unobserve(e.target);
+          }
+        }),
+      { rootMargin: "0px 0px -15% 0px" },
+    );
+    const current = new IntersectionObserver(
       (entries) => entries.forEach((e) => e.target.toggleAttribute("data-current", e.isIntersecting)),
       { rootMargin: "-45% 0px -45% 0px" },
     );
-    steps.forEach((s) => io.observe(s));
+    steps.forEach((s) => {
+      seen.observe(s);
+      current.observe(s);
+    });
+    let raf = 0;
+    const progress = () => {
+      raf = 0;
+      const r = list.getBoundingClientRect();
+      const p = Math.min(1, Math.max(0, (window.innerHeight * 0.5 - r.top) / r.height));
+      list.style.setProperty("--progress", p.toFixed(3));
+    };
+    window.addEventListener("scroll", () => (raf ||= requestAnimationFrame(progress)), { passive: true });
+    progress();
   }
 </script>
 
@@ -91,7 +118,22 @@ const steps = [1, 2, 3, 4, 5, 6, 7].map((n) => ({
     width: 1px;
     background: var(--line-strong);
   }
+  .steps::after {
+    /* emerald progress line, grown by the scroll script */
+    content: "";
+    position: absolute;
+    left: 32px;
+    top: 32px;
+    bottom: 32px;
+    width: 1px;
+    background: var(--accent);
+    transform-origin: top;
+    transform: scaleY(var(--progress, 0));
+    z-index: 0;
+  }
   .step {
+    position: relative;
+    z-index: 1;
     display: grid;
     grid-template-columns: 64px 2.5rem minmax(0, 1fr);
     gap: var(--s-4);
@@ -162,10 +204,61 @@ const steps = [1, 2, 3, 4, 5, 6, 7].map((n) => ({
   }
   .step .glyph,
   .step h3 {
-    transition: transform var(--dur-slow) var(--ease), color var(--dur) var(--ease);
+    transition: transform var(--dur-slow) var(--ease), color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
   }
   .step[data-current] .glyph {
     transform: scale(1.12);
+    box-shadow: 0 0 0 1px var(--accent), 0 0 24px var(--accent-soft);
+  }
+  .glyph :global(svg) {
+    animation: float 6s ease-in-out infinite;
+    animation-delay: calc(var(--n) * -0.8s);
+    transition: transform var(--dur-slow) var(--ease);
+  }
+  .step:hover .glyph :global(svg) {
+    transform: rotate(30deg) scale(1.05);
+  }
+  @keyframes float {
+    0%,
+    100% {
+      translate: 0 0;
+    }
+    50% {
+      translate: 0 -3px;
+    }
+  }
+
+  /* Draw-in, only once the script has marked the section (so nothing is hidden without it). */
+  .process[data-animate] .step:not([data-seen]) .glyph :global(.g-line) {
+    stroke-dashoffset: 1;
+  }
+  .process[data-animate] .glyph :global(.g-line) {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 0;
+    transition: stroke-dashoffset 900ms var(--ease) calc(var(--i) * 40ms + 150ms);
+  }
+  .process[data-animate] .step:not([data-seen]) .glyph :global(.g-node) {
+    transform: scale(0);
+  }
+  .process[data-animate] .glyph :global(.g-node) {
+    transform-box: fill-box;
+    transform-origin: center;
+    transition: transform 500ms cubic-bezier(0.34, 1.56, 0.64, 1) calc(var(--i) * 70ms + 100ms);
+  }
+  .process[data-animate] .step:not([data-seen]) .glyph :global(.g-plane),
+  .process[data-animate] .step:not([data-seen]) .glyph :global(.g-core) {
+    opacity: 0;
+  }
+  .process[data-animate] .glyph :global(.g-plane),
+  .process[data-animate] .glyph :global(.g-core) {
+    transition: opacity 800ms var(--ease) 700ms;
+  }
+  .process[data-animate] .step:not([data-seen]) .text {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  .process[data-animate] .text {
+    transition: opacity 700ms var(--ease) 200ms, transform 700ms var(--ease) 200ms;
   }
   .step[data-current] .num {
     color: var(--accent);
@@ -185,5 +278,6 @@ const steps = [1, 2, 3, 4, 5, 6, 7].map((n) => ({
     .num {
       display: none;
     }
+
   }
 </style>
