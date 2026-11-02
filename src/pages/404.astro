@@ -1,0 +1,73 @@
+---
+/** Not found. Cloudflare Pages serves dist/404.html for any unknown path. */
+import Base from "../layouts/Base.astro";
+import Footer from "../components/Footer.astro";
+import { emblemStageSVG } from "../lib/emblem";
+
+// The emblem at stage 4: the frame stands but the structure is unfinished, like this page.
+const glyph = emblemStageSVG(4);
+---
+
+<Base locale="en" path="/404" localized={false} title="Page not found | TATVA" description="This page does not exist.">
+  <section class="nf container">
+    <span class="glyph" set:html={glyph} />
+    <p class="eyebrow">Error 404</p>
+    <h1>This structure was never built.</h1>
+    <p class="lead">The page you are looking for does not exist, or it has moved.</p>
+    <div class="actions">
+      <a class="btn btn-primary" href="/">Back to home</a>
+      <a class="btn btn-ghost" href="/work/">See our work</a>
+      <a class="btn btn-ghost" href="/#contact">Contact us</a>
+    </div>
+  </section>
+  <Footer locale="en" />
+</Base>
+
+<style>
+  .nf {
+    min-height: 80vh;
+    padding-top: calc(var(--header-h) + var(--s-16));
+    padding-bottom: var(--s-24);
+    display: grid;
+    align-content: center;
+    justify-items: center;
+    text-align: center;
+    gap: var(--s-4);
+  }
+  .glyph {
+    width: 96px;
+    height: 96px;
+    margin-bottom: var(--s-4);
+  }
+  .glyph :global(svg) {
+    width: 100%;
+    height: 100%;
+  }
+  .glyph :global(.g-line) {
+    fill: none;
+    stroke: var(--text-muted);
+    stroke-width: 5;
+    stroke-linejoin: round;
+  }
+  .glyph :global(.g-node) {
+    fill: var(--accent);
+  }
+  h1 {
+    font-size: var(--step-3);
+    font-weight: 600;
+    color: var(--text-strong);
+    max-width: 18ch;
+  }
+  .lead {
+    color: var(--text-muted);
+    max-width: 40ch;
+    text-wrap: balance;
+  }
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--s-3);
+    margin-top: var(--s-6);
+  }
+</style>

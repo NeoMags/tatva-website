@@ -1,8 +1,8 @@
 /** POST /api/enquiry — the project enquiry form. */
 import { parseEnquiry, validateEnquiry } from "../../src/lib/validation";
-import { esc, ipHash, json, rateLimited, sameOrigin, telegramText, verifyTurnstile, type Env } from "../_lib/shared";
+import { esc, ipHash, json, rateLimited, sameOrigin, telegramText, verifyTurnstile, type Env, purgeExpired } from "../_lib/shared";
 
-export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
+export const onRequestPost: PagesFunction<Env> = async ({ request, env, waitUntil }) => {
   if (!sameOrigin(request)) return json({ error: "forbidden" }, 403);
   if (Number(request.headers.get("content-length") ?? 0) > 20_000) return json({ error: "too_large" }, 413);
 
@@ -44,6 +44,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       )
       .first<{ id: number }>();
     id = row?.id;
+    waitUntil(purgeExpired(env.DB)); // keep only what the privacy notice says we keep
   }
 
   const text = [

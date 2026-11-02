@@ -5,12 +5,12 @@
  * Voice recordings are forwarded to Telegram and never stored.
  */
 import { parseHelpRequest, validPhone } from "../../src/lib/validation";
-import { esc, ipHash, json, rateLimited, sameOrigin, telegramAudio, telegramText, type Env } from "../_lib/shared";
+import { esc, ipHash, json, rateLimited, sameOrigin, telegramAudio, telegramText, type Env, purgeExpired } from "../_lib/shared";
 
 const MAX_AUDIO_BYTES = 8 * 1024 * 1024; // ~2 minutes at 32 kbps is well under 1 MB; generous margin
 const AUDIO_TYPES = /^audio\/(webm|mp4|ogg|mpeg|aac|x-m4a)/;
 
-export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
+export const onRequestPost: PagesFunction<Env> = async ({ request, env, waitUntil }) => {
   if (!sameOrigin(request)) return json({ error: "forbidden" }, 403);
   if (Number(request.headers.get("content-length") ?? 0) > MAX_AUDIO_BYTES + 50_000) return json({ error: "too_large" }, 413);
 
@@ -46,6 +46,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
 
   let id: number | undefined;
   if (env.DB) {
+    waitUntil(purgeExpired(env.DB)); // keep only what the privacy notice says we keep
     // INSERT OR IGNORE + unique request_id: a retried submission is not recorded or alerted twice.
     const row = await env.DB.prepare(
       `INSERT OR IGNORE INTO assist_requests

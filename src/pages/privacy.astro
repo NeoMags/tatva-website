@@ -1,0 +1,263 @@
+---
+/**
+ * Privacy notice. Written to match what the code actually does (see functions/ and
+ * migrations/). If the backend changes what it collects or how long it keeps it,
+ * update this page in the same change.
+ */
+import Base from "../layouts/Base.astro";
+import Footer from "../components/Footer.astro";
+import { site } from "../data/site";
+
+const updated = "3 November 2026";
+---
+
+<Base
+  locale="en"
+  path="/privacy"
+  localized={false}
+  title="Privacy notice | TATVA"
+  description="What personal data the TATVA website collects, why, how long it is kept, and how to see, correct or delete it."
+>
+  <article class="page container prose">
+    <header class="head">
+      <p class="eyebrow">Privacy notice</p>
+      <h1>Your data, in plain words.</h1>
+      <p class="lead">
+        This notice explains what the TATVA website collects when you contact us or ask for help, why we need it, how
+        long we keep it, and what you can ask us to do with it.
+      </p>
+      <p class="meta">Last updated: {updated}</p>
+    </header>
+
+    <section>
+      <h2>Who is responsible</h2>
+      <p>
+        {site.legalName} ("TATVA", "we"), {site.location}, decides how the personal data described here is used. For
+        any privacy question or request, contact {site.founder}:
+      </p>
+      <ul>
+        <li>Email: <a href={`mailto:${site.email}`}>{site.email}</a></li>
+        <li>Phone: <a href={`tel:${site.phone.e164}`}>{site.phone.display}</a></li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>What we collect, and why</h2>
+      <p>We only collect what you choose to send us. Browsing the site does not require you to give us anything.</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th scope="col">When you…</th><th scope="col">We receive</th><th scope="col">We use it to</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Send the project enquiry form</td>
+              <td>Name, email, and, if you give them, phone, organisation, area of interest, budget range and your message</td>
+              <td>Reply to your enquiry and discuss the work you asked about</td>
+            </tr>
+            <tr>
+              <td>Ask a question or request help through the assistant</td>
+              <td>Name, phone number, your area, what you need, any note you add, and whether you ask for yourself or for someone else</td>
+              <td>Call you back and arrange the help you asked for</td>
+            </tr>
+            <tr>
+              <td>Record a voice note</td>
+              <td>The recording, its written transcript (which you can edit before sending), the language detected, your phone number and any note</td>
+              <td>Understand your request and call you back</td>
+            </tr>
+            <tr>
+              <td>Tap "Use my location"</td>
+              <td>Your approximate position (latitude and longitude), only at that moment</td>
+              <td>Find you, for example to deliver medicines or reach you for a visit</td>
+            </tr>
+            <tr>
+              <td>Send anything through the site</td>
+              <td>A one-way hash of your IP address (not the address itself) and the time</td>
+              <td>Stop spam and abuse by limiting how often requests can be sent</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>
+        Requests for TATVA Care may include health-related details such as medicines. Please share only what is needed
+        to help you. TATVA Care is <strong>not an emergency service</strong>: in an emergency, call{" "}
+        <a href="tel:112">112</a> or, for an ambulance, <a href="tel:108">108</a>.
+      </p>
+    </section>
+
+    <section>
+      <h2>Consent</h2>
+      <p>
+        For voice notes and help requests, we ask for your consent before anything is sent. If you ask on behalf of
+        someone else, such as a parent, please make sure they agree. You can withdraw consent at any time by
+        contacting us (details above); we will then stop using your data for that request and delete it, unless the law
+        requires us to keep it.
+      </p>
+    </section>
+
+    <section>
+      <h2>Who else handles your data</h2>
+      <p>We do not sell your data or share it for advertising. We use these services to run the site:</p>
+      <ul>
+        <li>
+          <strong>Cloudflare</strong> hosts the website, stores enquiries and requests in its database, and converts voice
+          notes to text with its speech recognition service. If spam protection is switched on, Cloudflare Turnstile
+          checks that a real person is sending the form.
+        </li>
+        <li>
+          <strong>Telegram</strong> delivers a copy of each enquiry or request, including any voice recording, to TATVA's
+          private chat so that we can respond quickly.
+        </li>
+      </ul>
+      <p>These providers may process data on servers outside India.</p>
+      <p>
+        Voice recordings are <strong>not stored in the website's database</strong>. They pass through the transcription
+        service and are delivered to TATVA's private Telegram chat.
+      </p>
+    </section>
+
+    <section>
+      <h2>How long we keep it</h2>
+      <ul>
+        <li>Project enquiries: deleted automatically 24 months after they are received.</li>
+        <li>Assistant and TATVA Care requests: deleted automatically 12 months after they are received.</li>
+        <li>Spam-prevention records (hashed IP address and time): deleted after 7 days.</li>
+        <li>Copies delivered to TATVA's Telegram chat are deleted by us on the same schedule.</li>
+      </ul>
+      <p>If you ask us to delete your data sooner, we will, unless the law requires us to keep it.</p>
+    </section>
+
+    <section>
+      <h2>Your rights</h2>
+      <p>Under India's Digital Personal Data Protection Act, 2023, you can ask us to:</p>
+      <ul>
+        <li>tell you what personal data we hold about you and how we use it;</li>
+        <li>correct or complete it;</li>
+        <li>delete it;</li>
+        <li>withdraw a consent you gave;</li>
+        <li>name another person to act for you if you cannot.</li>
+      </ul>
+      <p>
+        Send your request to <a href={`mailto:${site.email}`}>{site.email}</a>. We will reply as soon as we can. If you
+        are not satisfied with our response, you may complain to the Data Protection Board of India.
+      </p>
+    </section>
+
+    <section>
+      <h2>Cookies and preferences</h2>
+      <p>
+        The website does not use advertising or tracking cookies. It remembers your theme and sound choices
+        in your own browser so that the site looks the way you left it; this stays on your device and is not sent to
+        us.
+      </p>
+    </section>
+
+    <section>
+      <h2>Children</h2>
+      <p>
+        The website is meant for adults. If you are under 18, please ask a parent or guardian to contact us for you.
+      </p>
+    </section>
+
+    <section>
+      <h2>Security</h2>
+      <p>
+        All traffic to the site is encrypted. Only TATVA can see enquiries and requests. Access is limited to what is
+        needed to respond to you.
+      </p>
+    </section>
+
+    <section>
+      <h2>Changes to this notice</h2>
+      <p>If we change how we handle personal data, we will update this page and the date at the top.</p>
+    </section>
+  </article>
+  <Footer locale="en" />
+</Base>
+
+<style>
+  .page {
+    padding-top: calc(var(--header-h) + var(--s-16));
+    padding-bottom: var(--s-24);
+    max-width: 52rem;
+  }
+  .head {
+    display: grid;
+    gap: var(--s-4);
+    margin-bottom: var(--s-12);
+    padding-bottom: var(--s-8);
+    border-bottom: 1px solid var(--line);
+  }
+  h1 {
+    font-size: var(--step-3);
+    font-weight: 600;
+    color: var(--text-strong);
+  }
+  .lead {
+    font-size: var(--step-1);
+    color: var(--text);
+    max-width: 44ch;
+  }
+  .meta {
+    font-size: var(--step--1);
+    color: var(--text-muted);
+  }
+  section {
+    display: grid;
+    gap: var(--s-4);
+    margin-bottom: var(--s-12);
+  }
+  h2 {
+    font-size: var(--step-1);
+    font-weight: 600;
+    color: var(--text-strong);
+  }
+  p,
+  li {
+    color: var(--text);
+    max-width: 68ch;
+  }
+  ul {
+    margin: 0;
+    padding-left: 1.2em;
+    display: grid;
+    gap: var(--s-2);
+  }
+  a {
+    color: var(--accent);
+    text-underline-offset: 0.2em;
+  }
+  .table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--line);
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--step--1);
+    min-width: 36rem;
+  }
+  th,
+  td {
+    text-align: left;
+    vertical-align: top;
+    padding: var(--s-3) var(--s-4);
+    border-bottom: 1px solid var(--line);
+  }
+  th {
+    color: var(--text-muted);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    background: color-mix(in srgb, var(--text) 4%, transparent);
+  }
+  tbody tr:last-child td {
+    border-bottom: 0;
+  }
+  td:first-child {
+    color: var(--text-strong);
+    font-weight: 500;
+    width: 24%;
+  }
+</style>

@@ -29,8 +29,18 @@ npm run build && npx wrangler d1 migrations apply tatva --local && npx wrangler 
    and the public `PUBLIC_TURNSTILE_SITE_KEY` build variable.
 4. Test the form and the assistant on the live URL: an alert must arrive on Telegram.
 
+`npm run build` also runs `scripts/postbuild.mjs`, which writes `dist/_headers` (security headers and a
+Content-Security-Policy with the hash of every inline script). It is regenerated on each build; never edit it by hand.
+
+## Privacy
+`src/pages/privacy.astro` describes exactly what the backend collects and keeps. Records are deleted automatically
+(`RETENTION` in `functions/_lib/shared.ts`: enquiries 24 months, assistant requests 12 months, rate-limit rows 7 days).
+If either changes, change the other in the same commit. Copies in the Telegram chat must be deleted by hand on the same schedule.
+
 ## Before launch
 - Confirm project statuses marked `statusConfirmed: false` in `src/data/projects.ts`.
 - Native-speaker check of Kannada and Hindi; then set `reviewed: true` in `src/i18n/ui.ts` (pages are `noindex` until then).
 - Confirm TATVA Care name, area, hours and cost (`careHours` in `src/i18n/assistant.ts`).
 - Confirm the domain and update `site` in `astro.config.mjs`.
+- Confirm the used/exploring flags in `src/data/capabilities.ts` (groups marked `confirmed: false`).
+- Confirm the retention periods and have the privacy notice reviewed.

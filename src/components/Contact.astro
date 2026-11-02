@@ -102,7 +102,7 @@ const wa = `https://wa.me/${site.phone.e164.replace("+", "")}`;
 
       <label class="check">
         <input id="enq-consent" name="consent" type="checkbox" required />
-        <span>{t("form.consent")}</span>
+        <span>{t("form.consent")} <a href="/privacy/" target="_blank" rel="noopener">{t("form.privacy")}</a></span>
       </label>
       <small class="err" data-err-for="consent"></small>
 

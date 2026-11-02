@@ -164,6 +164,8 @@ const en = {
   "form.budget.placeholder": "Choose a range",
   "form.message": "Tell us about the project",
   "form.consent": "I agree that TATVA may contact me about this enquiry.",
+  "form.privacy": "Privacy notice",
+  "footer.privacy": "Privacy",
   "form.submit": "Send enquiry",
   "form.sending": "Sending…",
   "form.sent": "Thank you. Your enquiry has reached TATVA, and Nesar will get back to you.",
@@ -299,9 +301,14 @@ export function useTranslations(locale: Locale) {
 }
 
 /** Path for the same page in another locale. English has no prefix. */
+/**
+ * URL of a page in a language. Always ends in "/" (pages are folders with index.html,
+ * and the host redirects the slash-less form), so links and canonicals never redirect.
+ */
 export function localizePath(path: string, locale: Locale): string {
-  const clean = path.startsWith("/") ? path : `/${path}`;
-  return locale === defaultLocale ? clean : `/${locale}${clean === "/" ? "/" : clean}`;
+  let clean = path.startsWith("/") ? path : `/${path}`;
+  if (!clean.endsWith("/")) clean += "/";
+  return locale === defaultLocale ? clean : `/${locale}${clean}`;
 }
 
 export function isLocale(value: unknown): value is Locale {

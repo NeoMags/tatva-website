@@ -55,6 +55,36 @@ export async function rateLimited(
   return (row?.n ?? 0) >= limit;
 }
 
+/**
+ * How long records are kept (proposed; Nesar to confirm, and keep the privacy page in step).
+ * Rate-limit rows hold only a hashed IP and a time; they are needed for minutes, kept a week.
+ */
+export const RETENTION = {
+  enquiries: "-24 months",
+  assist_requests: "-12 months",
+  transcriptions: "-7 days",
+} as const;
+
+/**
+ * Delete records older than RETENTION. Called after each successful write, so the
+ * database never holds data past its period without needing a scheduled job. A failure
+ * here never blocks the visitor's request.
+ */
+export async function purgeExpired(db: D1Database | undefined): Promise<void> {
+  if (!db) return;
+  try {
+    await db.batch(
+      (Object.keys(RETENTION) as (keyof typeof RETENTION)[]).map((table) =>
+        db
+          .prepare(`DELETE FROM ${table} WHERE created_at < strftime('%Y-%m-%dT%H:%M:%fZ', 'now', ?)`)
+          .bind(RETENTION[table]),
+      ),
+    );
+  } catch (err) {
+    console.error("purgeExpired failed", err);
+  }
+}
+
 export async function verifyTurnstile(secret: string | undefined, token: unknown, request: Request): Promise<boolean> {
   if (!secret) return true; // Turnstile not configured
   if (typeof token !== "string" || !token) return false;

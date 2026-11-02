@@ -13,6 +13,8 @@ interface Data {
   s: AssistantStrings;
   phone: { display: string; e164: string };
   whatsapp: string;
+  /** URL of the privacy notice */
+  privacyUrl: string;
   disciplines: { title: string; body: string }[];
   /** small optimised headshot of Nesar, shown beside personal messages */
   avatar: string;
@@ -59,6 +61,9 @@ export function initAssistant(): void {
   if (!root || !raw) return;
   const data = JSON.parse(raw) as Data;
   const s = data.s;
+  /** The small privacy line under send buttons, linking to the full notice. */
+  const privacyNote = () =>
+    el("p", { class: "small" }, s.privacy, " ", el("a", { href: data.privacyUrl, target: "_blank", rel: "noopener" }, s.privacyLink));
 
   const openBtn = root.querySelector<HTMLButtonElement>("[data-assist-open]")!;
   const panel = root.querySelector<HTMLElement>("[data-assist-panel]")!;
@@ -451,7 +456,7 @@ export function initAssistant(): void {
       });
     }
 
-    card.append(err, send, el("p", { class: "small" }, s.privacy));
+    card.append(err, send, privacyNote());
     setActions(card, callTatva(), backChip());
   }
 
@@ -621,7 +626,7 @@ export function initAssistant(): void {
       el("label", { class: "tick", for: "voice-consent" }, consent, el("span", {}, s.consentVoice)),
       err,
       send,
-      el("p", { class: "small" }, s.privacy),
+      privacyNote(),
     );
 
     let requestId: string | undefined;

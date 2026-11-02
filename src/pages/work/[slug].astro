@@ -39,7 +39,7 @@ const missing = parts.filter((x) => !x.has);
 >
   <article class="project">
     <header class="hero container">
-      <a class="back" href="/work">← All work</a>
+      <a class="back" href="/work/">← All work</a>
       <div class="hero-grid">
         <div class="intro">
           <p class="kind">{p.kind}</p>
@@ -163,7 +163,7 @@ const missing = parts.filter((x) => !x.has);
     </div>
 
     <nav class="next container" aria-label="Next project">
-      <a href={`/work/${next.slug}`}>
+      <a href={`/work/${next.slug}/`}>
         <span class="next-label">Next project</span>
         <span class="next-title">{next.title} →</span>
       </a>
