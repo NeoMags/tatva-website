@@ -171,15 +171,42 @@ export const projects: Project[] = [
   {
     slug: "deals-bot",
     title: "Deals Bot",
-    kind: "Telegram automation",
-    disciplines: [2],
-    status: "Prototype",
+    kind: "Telegram deal-alert automation",
+    disciplines: [2, 1],
+    status: "In Development",
     statusConfirmed: false,
     featured: false,
-    summary: "A Telegram channel bot that posts Flipkart and Amazon deals, price drops and coupon codes automatically.",
+    summary:
+      "A Telegram channel that finds genuine Flipkart and Amazon deals on its own: real price drops, new lowest prices and coupon codes, posted automatically.",
+    problem:
+      "Online stores show a \"discount\" on almost everything, so genuine deals are hard to spot. A real drop, such as a product falling below its lowest price ever, often lasts only hours, and nobody can watch hundreds of products by hand.",
+    requirements: [
+      "Track product prices on Flipkart and Amazon.in, starting with electronics, home and fashion",
+      "Recognise a real deal: a significant drop, a price below the product's lowest recorded price, or a sudden change of more than 50%",
+      "Post deals to a Telegram channel automatically, without a manual approval step",
+      "Tag unusually large drops as a possible price glitch, so followers know to check before buying",
+      "Add coupon codes to the same channel",
+      "Earn through affiliate links, and run within free hosting limits",
+    ],
+    solution:
+      "A price watcher keeps a history for every product it tracks. Each new price is compared with that history; when it qualifies as a deal, a formatted post with the price, the drop and the link goes to the channel within minutes. Coupons are collected from affiliate coupon feeds first, with store pages as a supplement.",
+    approach:
+      "The bot runs on Supabase in its own database schema, kept separate inside an existing project to stay within the free plan. Price history and deal rules live in the database, so thresholds can be tuned without changing code. Monetisation is phased: Amazon links start as plain links and Flipkart affiliate links are added once the affiliate network approves the account.",
+    features: [
+      "Price history for every tracked product",
+      "Lowest-price-ever detection",
+      "Sudden-drop alerts (over 50%)",
+      "Possible-price-glitch tagging",
+      "Fully automatic posting to Telegram",
+      "Coupon codes in the same channel",
+      "Flipkart and Amazon.in in one feed",
+      "Affiliate-ready links",
+    ],
     tools: [
       { name: "Supabase", used: true },
+      { name: "PostgreSQL", used: true },
       { name: "Telegram Bot API", used: true },
+      { name: "Affiliate links", used: false },
     ],
     images: [],
   },
