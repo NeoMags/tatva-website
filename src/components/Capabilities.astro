@@ -1,0 +1,355 @@
+---
+/**
+ * Technology & capabilities: the tools behind the work, as eight connected disciplines
+ * rather than a wall of logos. Left: a network diagram (eight nodes around the TATVA
+ * core, edges showing how the layers depend on each other). Right: each discipline with
+ * its tools; a solid chip is used in TATVA's own work, a dashed one is being explored.
+ * Hovering or focusing a discipline lights its node and the connections it takes part in.
+ */
+import { capabilityGroups, capabilityLinks } from "../data/capabilities";
+import { useTranslations, type Locale } from "../i18n/ui";
+
+interface Props {
+  locale: Locale;
+}
+const { locale } = Astro.props;
+const t = useTranslations(locale);
+
+const R = 92;
+const round = (n: number) => Math.round(n * 100) / 100;
+const nodes = capabilityGroups.map((g, i) => {
+  const a = ((90 - 45 * i) * Math.PI) / 180;
+  return {
+    i,
+    num: String(i + 1).padStart(2, "0"),
+    x: round(Math.cos(a) * R),
+    y: round(-Math.sin(a) * R),
+    lx: round(Math.cos(a) * (R + 17)),
+    ly: round(-Math.sin(a) * (R + 17)),
+  };
+});
+// The TATVA core: a small hexagon with the inner cube's three edges.
+const hex = Array.from({ length: 6 }, (_, k) => {
+  const a = ((90 - 60 * k) * Math.PI) / 180;
+  return [round(Math.cos(a) * 22), round(-Math.sin(a) * 22)];
+});
+const corePath = `M${hex.map(([x, y]) => `${x} ${y}`).join("L")}Z M0 0L${hex[1][0]} ${hex[1][1]}M0 0L${hex[3][0]} ${hex[3][1]}M0 0L${hex[5][0]} ${hex[5][1]}`;
+---
+
+<section class="capabilities" id="capabilities" aria-labelledby="cap-title" data-capabilities>
+  <div class="container grid">
+    <div class="visual">
+      <header class="head">
+        <p class="eyebrow">{t("cap.eyebrow")}</p>
+        <h2 id="cap-title">{t("cap.title")}</h2>
+        <p class="intro">{t("cap.intro")}</p>
+      </header>
+
+      <svg class="network" viewBox="-130 -130 260 260" aria-hidden="true" data-network>
+        <g class="spokes">
+          {nodes.map((n) => <path d={`M0 0L${n.x} ${n.y}`} data-spoke={n.i} />)}
+        </g>
+        <g class="links">
+          {
+            capabilityLinks.map(([a, b], k) => (
+              <path
+                d={`M${nodes[a].x} ${nodes[a].y}L${nodes[b].x} ${nodes[b].y}`}
+                data-a={a}
+                data-b={b}
+                pathLength="1"
+                style={`--k:${k}`}
+              />
+            ))
+          }
+        </g>
+        <g class="pulses">
+          {
+            capabilityLinks.map(([a, b], k) => (
+              <path
+                d={`M${nodes[a].x} ${nodes[a].y}L${nodes[b].x} ${nodes[b].y}`}
+                data-a={a}
+                data-b={b}
+                pathLength="1"
+                style={`--k:${k}`}
+              />
+            ))
+          }
+        </g>
+        <path class="core" d={corePath} />
+        <g class="nodes">
+          {
+            nodes.map((n) => (
+              <g data-node={n.i}>
+                <circle cx={n.x} cy={n.y} r="5" />
+                <text x={n.lx} y={n.ly} dominant-baseline="central" text-anchor="middle">
+                  {n.num}
+                </text>
+              </g>
+            ))
+          }
+        </g>
+      </svg>
+    </div>
+
+    <div class="list-wrap">
+      <ol class="list">
+        {
+          capabilityGroups.map((g, i) => (
+            <li class="row" data-cap={i} tabindex="0">
+              <span class="num">{String(i + 1).padStart(2, "0")}</span>
+              <div class="text">
+                <h3>{g.key}</h3>
+                <p class="purpose">{g.purpose}</p>
+                <ul class="tools" aria-label={g.key}>
+                  {g.tools.map((tool) => (
+                    <li class:list={["chip", { exploring: !tool.used }]}>
+                      {tool.name}
+                      {!tool.used && <span class="visually-hidden"> ({t("cap.exploring")})</span>}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </li>
+          ))
+        }
+      </ol>
+      <p class="legend">
+        <span class="chip">{t("cap.used")}</span>
+        <span class="chip exploring">{t("cap.exploring")}</span>
+      </p>
+    </div>
+  </div>
+</section>
+
+<script>
+  // Light the hovered/focused discipline's node and every connection it takes part in.
+  const svg = document.querySelector<SVGSVGElement>("[data-network]");
+  const rows = document.querySelectorAll<HTMLElement>("[data-cap]");
+  if (svg) {
+    const set = (i: string | null) => {
+      svg.toggleAttribute("data-focus", i !== null);
+      svg.querySelectorAll<SVGElement>("[data-node]").forEach((n) => n.toggleAttribute("data-on", n.dataset.node === i));
+      svg.querySelectorAll<SVGElement>("[data-a]").forEach((e) =>
+        e.toggleAttribute("data-on", i !== null && (e.dataset.a === i || e.dataset.b === i)),
+      );
+      svg.querySelectorAll<SVGElement>("[data-spoke]").forEach((s) => s.toggleAttribute("data-on", s.dataset.spoke === i));
+    };
+    rows.forEach((row) => {
+      const on = () => set(row.dataset.cap ?? null);
+      const off = () => set(null);
+      row.addEventListener("pointerenter", on);
+      row.addEventListener("focusin", on);
+      row.addEventListener("pointerleave", off);
+      row.addEventListener("focusout", off);
+    });
+  }
+</script>
+
+<style>
+  .capabilities {
+    padding-block: var(--s-24);
+    border-top: 1px solid var(--line);
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    gap: var(--s-16);
+    align-items: start;
+  }
+  .visual {
+    position: sticky;
+    top: calc(var(--header-h) + var(--s-8));
+    display: grid;
+    gap: var(--s-8);
+  }
+  .head {
+    display: grid;
+    gap: var(--s-4);
+  }
+  h2 {
+    font-size: var(--step-3);
+    font-weight: 600;
+    color: var(--text-strong);
+    max-width: 14ch;
+  }
+  .intro {
+    color: var(--text-muted);
+    max-width: 42ch;
+  }
+
+  /* Network diagram */
+  .network {
+    width: 100%;
+    max-width: 380px;
+    overflow: visible;
+  }
+  .spokes path {
+    stroke: var(--line);
+    stroke-width: 0.6;
+    stroke-dasharray: 2 3;
+    transition: stroke var(--dur) var(--ease);
+  }
+  .spokes path[data-on] {
+    stroke: var(--accent);
+  }
+  .links path {
+    stroke: var(--line-strong);
+    stroke-width: 0.8;
+    fill: none;
+    transition: stroke var(--dur) var(--ease), opacity var(--dur) var(--ease);
+  }
+  .network[data-focus] .links path {
+    opacity: 0.35;
+  }
+  .network[data-focus] .links path[data-on] {
+    stroke: var(--accent);
+    opacity: 1;
+    stroke-width: 1.2;
+  }
+  /* Signals travelling along the connections: a short dash moving end to end. */
+  .pulses path {
+    stroke: var(--accent);
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    fill: none;
+    stroke-dasharray: 0.06 0.94;
+    stroke-dashoffset: 1;
+    opacity: 0.8;
+    animation: signal 4.8s linear infinite;
+    animation-delay: calc(var(--k) * -0.73s);
+  }
+  .network[data-focus] .pulses path:not([data-on]) {
+    opacity: 0;
+  }
+  @keyframes signal {
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+  .core {
+    fill: var(--accent-soft);
+    stroke: var(--accent);
+    stroke-width: 1;
+    stroke-linejoin: round;
+  }
+  .nodes circle {
+    fill: var(--bg);
+    stroke: var(--text);
+    stroke-width: 1.2;
+    transition: fill var(--dur) var(--ease), stroke var(--dur) var(--ease);
+  }
+  .nodes text {
+    font-family: var(--font-display);
+    font-size: 8px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    fill: var(--text-muted);
+    transition: fill var(--dur) var(--ease);
+  }
+  .nodes g {
+    transform-box: fill-box;
+    transform-origin: center;
+    transition: transform var(--dur) var(--ease);
+  }
+  .nodes [data-on] circle {
+    fill: var(--accent);
+    stroke: var(--accent);
+  }
+  .nodes [data-on] text {
+    fill: var(--accent);
+  }
+
+  /* Discipline list */
+  .list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid var(--line);
+  }
+  .row {
+    display: grid;
+    grid-template-columns: 3rem minmax(0, 1fr);
+    gap: var(--s-4);
+    padding: var(--s-6) var(--s-4) var(--s-6) 0;
+    border-bottom: 1px solid var(--line);
+    outline-offset: -2px;
+    transition: background-color var(--dur) var(--ease);
+  }
+  .row:hover,
+  .row:focus-visible {
+    background: linear-gradient(90deg, var(--accent-soft), transparent 70%);
+  }
+  .num {
+    font-family: var(--font-display);
+    font-size: var(--step--1);
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    padding: 0.3em 0 0 var(--s-2);
+    font-variant-numeric: tabular-nums;
+  }
+  .row:hover .num,
+  .row:focus-visible .num {
+    color: var(--accent);
+  }
+  .text {
+    display: grid;
+    gap: var(--s-2);
+  }
+  h3 {
+    font-size: var(--step-1);
+    font-weight: 600;
+    color: var(--text-strong);
+  }
+  .purpose {
+    color: var(--text-muted);
+  }
+  .tools {
+    list-style: none;
+    margin: var(--s-2) 0 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-2);
+  }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.3em 0.75em;
+    font-size: var(--step--1);
+    line-height: 1.3;
+    color: var(--text);
+    border: 1px solid var(--line-strong);
+    background: color-mix(in srgb, var(--text) 4%, transparent);
+  }
+  .chip.exploring {
+    border-style: dashed;
+    background: transparent;
+    color: var(--text-muted);
+  }
+  .legend {
+    display: flex;
+    gap: var(--s-3);
+    margin-top: var(--s-6);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pulses path {
+      animation: none;
+      opacity: 0;
+    }
+  }
+  @media (max-width: 959px) {
+    .grid {
+      grid-template-columns: 1fr;
+      gap: var(--s-8);
+    }
+    .visual {
+      position: static;
+    }
+    .network {
+      max-width: 300px;
+      justify-self: center;
+    }
+  }
+</style>

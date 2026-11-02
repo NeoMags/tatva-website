@@ -27,6 +27,7 @@ const en = {
   "nav.disciplines": "Disciplines",
   "nav.process": "Process",
   "nav.about": "About",
+  "nav.capabilities": "Technology",
   "nav.contact": "Contact",
   "nav.cta": "Start a project",
   "nav.menu": "Menu",
@@ -114,6 +115,12 @@ const en = {
   "process.8.title": "Create lasting impact",
   "process.8.body":
     "The solution becomes part of how the business runs: less manual work, clearer numbers, better decisions, and a foundation to grow on.",
+  "cap.eyebrow": "Technology & capabilities",
+  "cap.title": "The technology behind the work.",
+  "cap.intro":
+    "Eight disciplines that work as one system. Point to or tap a discipline to see what it connects to. Solid tags are tools used in TATVA's own work; dashed tags are being explored.",
+  "cap.used": "Used in our work",
+  "cap.exploring": "Exploring",
   "process.finale.label": "Where every step leads",
   "process.finale.line": "We don't just build what you imagine. We help you discover what is possible.",
 
@@ -177,6 +184,7 @@ const kn: Partial<Record<UIKey, string>> = {
   "nav.disciplines": "ಕ್ಷೇತ್ರಗಳು",
   "nav.process": "ಪ್ರಕ್ರಿಯೆ",
   "nav.about": "ಪರಿಚಯ",
+  "nav.capabilities": "ತಂತ್ರಜ್ಞಾನ",
   "nav.contact": "ಸಂಪರ್ಕ",
   "nav.cta": "ಯೋಜನೆ ಆರಂಭಿಸಿ",
   "nav.menu": "ಮೆನು",
@@ -235,6 +243,7 @@ const hi: Partial<Record<UIKey, string>> = {
   "nav.disciplines": "विधाएँ",
   "nav.process": "प्रक्रिया",
   "nav.about": "परिचय",
+  "nav.capabilities": "टेक्नोलॉजी",
   "nav.contact": "संपर्क",
   "nav.cta": "प्रोजेक्ट शुरू करें",
   "nav.menu": "मेनू",

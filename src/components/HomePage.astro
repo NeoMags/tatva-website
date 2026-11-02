@@ -5,6 +5,7 @@ import Disciplines from "./Disciplines.astro";
 import Work from "./Work.astro";
 import Process from "./Process.astro";
 import Founder from "./Founder.astro";
+import Capabilities from "./Capabilities.astro";
 import Contact from "./Contact.astro";
 import Footer from "./Footer.astro";
 import type { Locale } from "../i18n/ui";
@@ -21,6 +22,7 @@ const { locale } = Astro.props;
   <Work locale={locale} />
   <Process locale={locale} />
   <Founder locale={locale} />
+  <Capabilities locale={locale} />
   <Contact locale={locale} />
   <Footer locale={locale} />
 </Base>
