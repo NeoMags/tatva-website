@@ -4,13 +4,12 @@ name = "tatva-website"
 pages_build_output_dir = "dist"
 compatibility_date = "2026-10-01"
 
-# D1 database for enquiries and assistant requests.
-# Turn on after creating the database: paste its id (not a secret) and uncomment.
-# [[d1_databases]]
-# binding = "DB"
-# database_name = "tatva"
-# database_id = "PASTE_DATABASE_ID_HERE"
-# migrations_dir = "migrations"
+# D1 database for enquiries and assistant requests (the id is not a secret).
+[[d1_databases]]
+binding = "DB"
+database_name = "tatva"
+database_id = "3c9a16fb-055c-4a03-87a1-0c80715f4bd3"
+migrations_dir = "migrations"
 
 # Workers AI (speech-to-text for voice notes). Free daily allowance: 10,000 neurons.
 [ai]
