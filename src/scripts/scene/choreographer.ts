@@ -39,6 +39,8 @@ export interface Frame {
   pointer: { x: number; y: number };
   /** canvas opacity, 0..1 */
   visibility: number;
+  /** 0..1 how far the scene has moved into the disciplines section */
+  discBlend: number;
 }
 
 export class Choreographer {
@@ -73,6 +75,7 @@ export class Choreographer {
     travel: 0,
     pointer: { x: 0, y: 0 },
     visibility: 1,
+    discBlend: 0,
   };
 
   constructor(
@@ -96,6 +99,30 @@ export class Choreographer {
       el.addEventListener("pointerleave", leave);
       el.addEventListener("focusout", leave);
     });
+  }
+
+  /**
+   * Hovering a discipline tips the structure toward that node. A damped spring
+   * makes it overshoot slightly and settle, like something finding its balance.
+   */
+  private readonly lean = { x: 0, y: 0, vx: 0, vy: 0 };
+  private updateLean(dt: number): void {
+    let tx = 0;
+    let ty = 0;
+    if (this.hovered >= 0) {
+      const angle = ((90 - 60 * this.hovered) * Math.PI) / 180;
+      // Turn so the hovered node swings toward the viewer.
+      // (rotation about Y brings a right-hand node forward when negative; about X, a top node when positive)
+      tx = -Math.cos(angle) * 0.16;
+      ty = Math.sin(angle) * 0.16;
+    }
+    const stiffness = 26;
+    const damping = 5.5;
+    const step = Math.min(dt, 1 / 30);
+    this.lean.vx += ((tx - this.lean.x) * stiffness - this.lean.vx * damping) * step;
+    this.lean.vy += ((ty - this.lean.y) * stiffness - this.lean.vy * damping) * step;
+    this.lean.x += this.lean.vx * step;
+    this.lean.y += this.lean.vy * step;
   }
 
   setPointer(clientX: number, clientY: number): void {
@@ -178,6 +205,8 @@ export class Choreographer {
     this.out.scale = lerp(heroScale, discScale, d);
     this.out.position.lerpVectors(this.heroCentre, this.discCentre, d);
     this.out.position.y += Math.sin(time * 0.5) * heroSize * 0.012 * (1 - d);
+    // Disciplines: a slow float, as if the structure is suspended and balancing.
+    this.out.position.y += Math.sin(time * 0.7) * discSize * 0.012 * d;
 
     // Orientation: logo pose, a slow continuous roll, gentle yaw sway, pointer tilt.
     // In the disciplines section the roll settles to zero so nodes line up with their labels.
@@ -186,9 +215,14 @@ export class Choreographer {
     const free = sway * (1 - d);
     const roll = ((time - this.startTime - BUILD_SECONDS) * 0.05) % (Math.PI * 2);
     const settledRoll = Math.atan2(Math.sin(roll), Math.cos(roll)) * free;
-    const yaw = (Math.sin(time * 0.21) * 0.18 + this.pointer.x * 0.2) * free;
-    const tilt = this.pointer.y * 0.14 * free;
-    this.qRoll.setFromAxisAngle(this.axisZ, settledRoll);
+    this.updateLean(dt);
+    // Balancing sway in the disciplines section: small enough that nodes stay by their numbers.
+    const balanceYaw = (Math.sin(time * 0.55) * 0.07 + this.lean.x) * d;
+    const balanceTilt = (Math.sin(time * 0.43 + 1.3) * 0.05 + this.lean.y) * d;
+    const balanceRoll = Math.sin(time * 0.31) * 0.035 * d;
+    const yaw = (Math.sin(time * 0.21) * 0.18 + this.pointer.x * 0.2) * free + balanceYaw;
+    const tilt = this.pointer.y * 0.14 * free + balanceTilt;
+    this.qRoll.setFromAxisAngle(this.axisZ, settledRoll + balanceRoll);
     this.qYaw.setFromAxisAngle(this.axisY, yaw);
     this.qTilt.setFromAxisAngle(this.axisX, tilt);
     this.out.rotation.copy(this.qTilt).multiply(this.qYaw).multiply(this.qRoll).multiply(this.logoPose);
@@ -197,7 +231,7 @@ export class Choreographer {
     // hero turns the tesseract inside out (the inner cube becomes the outer one).
     const breath = Math.sin(time * 0.45) * 0.12 * sway;
     const t = this.out.tesseract;
-    t.xw = lerp(breath + e * (Math.PI / 2), 0, d);
+    t.xw = lerp(breath + e * (Math.PI / 2), Math.sin(time * 0.5) * 0.06, d);
     t.yw = lerp(e * 0.55, 0, d);
     t.zw = lerp(Math.sin(time * 0.31) * 0.05 * sway, 0, d);
     t.build = build;
@@ -205,6 +239,7 @@ export class Choreographer {
     t.activeNode = d > 0.5 && this.hovered >= 0 ? this.nodeOrder[this.hovered] : -1;
     t.pulses = 1;
 
+    this.out.discBlend = d;
     this.out.travel = e * (1 - d);
     this.out.pointer.x = this.pointer.x;
     this.out.pointer.y = this.pointer.y;
