@@ -1,0 +1,174 @@
+/*
+ * Pointer micro-interactions (see src/scripts/ui/interactions.ts).
+ * Pointer-driven effects apply only once the script sets html[data-fx="on"]:
+ * precise pointer, hover-capable, no reduced-motion preference.
+ * Floating and gradient flow are ambient and also stop under reduced motion.
+ */
+
+/* ---------- 3D tilt ---------- */
+/* Applied only while tilting, so at rest the card renders flat and its text stays crisp. */
+html[data-fx="on"] [data-fx~="tilt"][data-tilting] {
+  transform: perspective(1000px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+}
+/* While tilting, the script eases the values itself; a CSS transition would lag. */
+html[data-fx="on"] [data-fx~="tilt"][data-tilting] {
+  transition-property: opacity, background-color, border-color, box-shadow !important;
+}
+html[data-fx="on"] [data-fx~="tilt"][data-hover] {
+  box-shadow: 0 24px 60px -30px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+/* ---------- Border glow ---------- */
+.fx-glow {
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  pointer-events: none;
+  background: radial-gradient(
+    260px circle at var(--mx, 50%) var(--my, 50%),
+    var(--accent),
+    color-mix(in srgb, var(--accent) 30%, transparent) 40%,
+    transparent 70%
+  );
+  /* show only the 1px ring: the padding box minus the content box */
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 300ms var(--ease);
+  z-index: 2;
+}
+[data-hover] > .fx-glow {
+  opacity: 1;
+}
+
+/* ---------- Spotlight inside rows and cards ---------- */
+.fx-spot {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background: radial-gradient(
+    420px circle at var(--mx, 50%) var(--my, 50%),
+    color-mix(in srgb, var(--accent) 12%, transparent),
+    transparent 65%
+  );
+  opacity: 0;
+  transition: opacity 300ms var(--ease);
+  z-index: 0;
+}
+[data-hover] > .fx-spot {
+  opacity: 1;
+}
+/* keep row content above the light */
+html[data-fx="on"] [data-fx~="spot"] > :not(.fx-spot, .fx-glow, .fx-flow) {
+  position: relative;
+  z-index: 1;
+}
+
+/* ---------- Page-wide cursor spotlight ---------- */
+.fx-page-spot {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 40; /* under the header (50) and assistant (60) */
+  background: radial-gradient(
+    560px circle at var(--sx, -999px) var(--sy, -999px),
+    color-mix(in srgb, var(--accent) 6%, transparent),
+    transparent 70%
+  );
+  transition: opacity 400ms var(--ease);
+}
+:root[data-theme="light"] .fx-page-spot {
+  background: radial-gradient(
+    560px circle at var(--sx, -999px) var(--sy, -999px),
+    color-mix(in srgb, var(--accent) 8%, transparent),
+    transparent 70%
+  );
+}
+
+/* ---------- Gradient flow ---------- */
+/* A slow line of light travelling along the top edge of a card. */
+.fx-flow {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -1px;
+  height: 1px;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--accent) 80%, transparent) 50%,
+    transparent 100%
+  );
+  background-size: 40% 100%;
+  background-repeat: no-repeat;
+  animation: fx-flow 7s linear infinite;
+  z-index: 2;
+}
+@keyframes fx-flow {
+  from {
+    background-position: -40% 0;
+  }
+  to {
+    background-position: 140% 0;
+  }
+}
+
+/* Primary buttons: a soft sheen drifting across the emerald. */
+.btn-primary {
+  background-image: linear-gradient(
+    110deg,
+    var(--accent) 0%,
+    var(--accent) 35%,
+    color-mix(in srgb, var(--accent), #fff 22%) 50%,
+    var(--accent) 65%,
+    var(--accent) 100%
+  );
+  background-size: 250% 100%;
+  animation: fx-sheen 6s ease-in-out infinite;
+}
+@keyframes fx-sheen {
+  0% {
+    background-position: 100% 0;
+  }
+  60%,
+  100% {
+    background-position: 0% 0;
+  }
+}
+
+/* ---------- Magnetic ---------- */
+html[data-fx="on"] :is([data-magnetic], .btn, .launcher) {
+  translate: var(--mgx, 0) var(--mgy, 0);
+}
+
+/* ---------- Subtle floating ---------- */
+[data-float] {
+  animation: fx-float 7s ease-in-out infinite;
+  animation-delay: calc(var(--float-delay, 0) * -1s);
+}
+@keyframes fx-float {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 -5px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fx-flow,
+  .btn-primary,
+  [data-float] {
+    animation: none;
+  }
+}

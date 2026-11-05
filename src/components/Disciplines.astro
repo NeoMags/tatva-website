@@ -35,7 +35,7 @@ const fallback = tesseractSVG({ id: "disc-tesseract" });
       <ol class="list">
         {
           disciplines.map((d) => (
-            <li class="item" data-discipline={d.i} tabindex="0">
+            <li class="item" data-fx="spot" data-discipline={d.i} tabindex="0">
               <span class="num">{d.num}</span>
               <div class="text">
                 <h3>{d.title}</h3>

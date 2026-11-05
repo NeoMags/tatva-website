@@ -38,7 +38,7 @@ const used = [...new Set(projects.flatMap((p) => p.disciplines))].sort();
   {
     projects.map((p, n) => (
       <li data-disciplines={p.disciplines.join(" ")}>
-        <a class="row" href={`/work/${p.slug}/`}>
+        <a class="row" data-fx="spot" href={`/work/${p.slug}/`}>
           <span class="num">{String(n + 1).padStart(2, "0")}</span>
           <span class="name">
             <span class="title">{p.title}</span>

@@ -45,7 +45,7 @@ const corePath = `M${hex.map(([x, y]) => `${x} ${y}`).join("L")}Z M0 0L${hex[1][
         <p class="intro">{t("cap.intro")}</p>
       </header>
 
-      <svg class="network" viewBox="-130 -130 260 260" aria-hidden="true" data-network>
+      <svg class="network" viewBox="-130 -130 260 260" aria-hidden="true" data-network data-float>
         <g class="spokes">
           {nodes.map((n) => <path d={`M0 0L${n.x} ${n.y}`} data-spoke={n.i} />)}
         </g>
@@ -95,7 +95,7 @@ const corePath = `M${hex.map(([x, y]) => `${x} ${y}`).join("L")}Z M0 0L${hex[1][
       <ol class="list">
         {
           capabilityGroups.map((g, i) => (
-            <li class="row" data-cap={i} tabindex="0">
+            <li class="row" data-fx="spot" data-cap={i} tabindex="0">
               <span class="num">{String(i + 1).padStart(2, "0")}</span>
               <div class="text">
                 <h3>{g.key}</h3>

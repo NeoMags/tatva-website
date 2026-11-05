@@ -6,6 +6,7 @@ import "@fontsource/noto-sans-kannada/700.css";
 import "@fontsource/noto-sans-devanagari/400.css";
 import "@fontsource/noto-sans-devanagari/700.css";
 import "../styles/global.css";
+import "../styles/interactions.css";
 import Header from "../components/Header.astro";
 import Assistant from "../components/Assistant.astro";
 import { locales, localeMeta, localizePath, useTranslations, type Locale } from "../i18n/ui";
@@ -75,8 +76,10 @@ const canonical = new URL(localizePath(path, locale), site).href;
     <script>
       import { detectTier } from "../scripts/scene/capability";
       import { initHeader } from "../scripts/ui/header";
+      import { initInteractions } from "../scripts/ui/interactions";
 
       initHeader();
+      initInteractions();
 
       const root = document.documentElement;
       const canvas = document.getElementById("scene") as HTMLCanvasElement | null;
